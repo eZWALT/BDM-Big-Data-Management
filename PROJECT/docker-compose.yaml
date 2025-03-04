@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # Zookeeper (Required for Kafka)
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+
+  # Kafka (Streaming Platform)
+  kafka:
+    image: bitnami/kafka:latest
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    ports:
+      - "9092:9092"
+
+  # HDFS (Storage Layer)
+  hdfs:
+    image: bde2020/hadoop-namenode:latest
+    environment:
+      - CLUSTER_NAME=hadoop_cluster
+    ports:
+      - "9870:9870"
+
+  # PostgreSQL (Metadata Store)
+  postgres:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=metadata_db
+    ports:
+      - "5432:5432"
+
+  # Apache Hive (SQL Querying on Data Lake)
+  hive-metastore:
+    image: bde2020/hive:latest
+    depends_on:
+      - postgres
+    environment:
+      - HIVE_METASTORE_DB=postgres
+    ports:
+      - "9083:9083"
+
+  # Apache Spark (Processing Engine)
+  spark:
+    image: bitnami/spark:latest
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "7077:7077"
+
+  # Apache Airflow (Workflow Orchestration)
+  airflow:
+    image: apache/airflow:latest
+    depends_on:
+      - postgres
+    environment:
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://admin:admin@postgres:5432/metadata_db
+    ports:
+      - "8080:8080"
+
+networks:
+  bigdata_network:
+    driver: bridge
+
+volumes:
+  delta_storage:
