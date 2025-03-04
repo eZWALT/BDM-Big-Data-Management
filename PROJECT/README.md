@@ -8,8 +8,11 @@ VibeRadar provides real-time and historical long-term analysis of product impres
 
 - **docker-compose.yaml**: Contains the whole software set-up and configuration of the different needed processes.
 - **.github/workflows/**: CI/CD configuration files
-- **src/**: main source code of the project divided into 4 high level zones (Ingestion, Landing, Trusted, Exploitation)
+- **config/**: configuration files 
+- **data/**: persistent data 
 - **resources/**: images, audios or other miscellaneous resources
+- **src/**: main source code of the project divided into 4 high level zones (Ingestion, Landing, Trusted, Exploitation)
+
 
 ## Architectural desing & tech stack
 
@@ -45,6 +48,15 @@ docker-compose up -d
 3. Youtube 
 4. TikTok (Future extension)
 5. Mastodon (Future extension)
+
+## Testing suite
+
+To contribute to our test-driven development, we continiously produce unit tests, which can be executed inside the docker environment using the following command from the base project path:
+
+```sh
+PYTHONPATH=. pytest tests/
+```
+
 
 
 ## Credits
