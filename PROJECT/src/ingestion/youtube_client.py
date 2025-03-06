@@ -1,12 +1,34 @@
-from utils import IngestionTask
+from src.utils.client import APIClient
+from src.utils.config import ConfigManager
 
 import requests
 import os 
 
+popular_endpoints = {
+    "search": "https://www.googleapis.com/youtube/v3/search",
+    "video": "https://www.googleapis.com/youtube/v3/videos",
+    "channels": "https://www.googleapis.com/youtube/v3/channels",
+    "playlists": "https://www.googleapis.com/youtube/v3/playlists", 
+    "comments": "https://www.googleapis.com/youtube/v3/commentThreads",
+    "subscriptions": "https://www.googleapis.com/youtube/v3/subscriptions", 
+    "videoCategories": "https://www.googleapis.com/youtube/v3/videoCategories"
+}
 
-class YoutubeIngestionTask(IngestionTask):
-    pass
 
+class YoutubeAPIClient(APIClient):
+    def __init__(self):
+        super().__init__()
+        self.api_key = None
+        
+    def authenticate(self):
+        pass
+    
+    def connect(self):
+        pass 
+    
+    def fetch(self, base: str, endpoint: str, params: dict = None):
+        pass
+        
 
 # Local main setup to test the class
 if __name__ == "__main__":

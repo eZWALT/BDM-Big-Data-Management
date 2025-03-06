@@ -1,0 +1,42 @@
+apis:
+  twitter:
+    base_url: "https://api.twitter.com/2/"
+    endpoints:
+      search: "tweets/search/recent"
+      user: "users/by/username"
+    auth:
+      type: "api_key"
+      api_key_env: "TWITTER_API_KEY"
+
+  youtube:
+    base_url: "https://www.googleapis.com/youtube/v3/"
+    endpoints:
+      search: "search"   #Long Video search
+      video: "videos"
+      channels: "channels"
+      playlists: "playlists"
+      playlist_items: "playlistItems"
+      comments: "commentThreads"
+      captions: "captions"
+      live_broadcasts: "liveBroadcasts"
+      live_chat: "liveChat/messages"
+      subscriptions: "subscriptions"
+      video_categories: "videoCategories"
+      trending: "videos?chart=mostPopular"                       
+      shorts_search: "search?videoDuration=short"  #Short Video search
+      shorts_popular: "videos?chart=mostPopular&videoDuration=short"
+      shorts_playlist: "playlistItems"
+      analytics: "analytics/reports"
+    auth:
+      type: "api_key"
+      api_key_env: "YOUTUBE_API_KEY"
+
+  bluesky:
+    base_url: "https://bsky.social/xrpc/"
+    endpoints:
+      posts: "com.atproto.repo.listRecords"
+      profile: "com.atproto.identity.resolveHandle"
+    auth:
+      type: "username_password"
+      username_env: "BLUESKY_USERNAME"
+      password_env: "BLUESKY_PASSWORD"
