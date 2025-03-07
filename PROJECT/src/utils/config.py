@@ -19,10 +19,9 @@ class ConfigManager:
     def get_api_base_url(self, api_name):
         return self.config.get("apis", {}).get(api_name, {}).get("base_url", "")
 
-    def get_api_endpoint(self, api_name, endpoint_name):
-        base_url = self.get_api_base_url(api_name)
-        endpoint_path = self.config.get("apis", {}).get(api_name, {}).get("endpoints", {}).get(endpoint_name, "")
-        return f"{base_url}{endpoint_path}" if base_url and endpoint_path else None
+    def get_api_endpoints(self, api_name):
+        endpoints = self.config.get("apis", {}).get(api_name, {}).get("endpoints", {})
+        return endpoints
     
     # Retrieves authentication credentials based on the API's auth type and raises an error if missing."""
     def get_api_credentials(self, api_name):
