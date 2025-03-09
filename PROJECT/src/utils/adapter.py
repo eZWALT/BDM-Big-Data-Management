@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 
-### Abstract class for format adapters, designed to decouple social media platforms from 
-### different data formats. This structure ensures flexibility and scalability by allowing 
-### multiple social media clients (n) and format adapters (m) to coexist without creating 
+### Abstract class for format adapters, designed to decouple social media platforms from
+### different data formats. This structure ensures flexibility and scalability by allowing
+### multiple social media clients (n) and format adapters (m) to coexist without creating
 ### a combinatorial explosion of combinations, keeping complexity at O(n + m).
+
 
 class FormatAdapter(ABC):
     def __init__(self):
@@ -23,7 +24,7 @@ class FormatAdapter(ABC):
     # Extracts metadata (e.g., duration, resolution) from the raw data.
     def extract_metadata(self):
         pass
-    
+
     @abstractmethod
     # Converts the data into the required format (if necessary).
     def convert(self):

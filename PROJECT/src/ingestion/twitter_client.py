@@ -1,7 +1,7 @@
 from utils import IngestionTask
 
 import requests
-import os 
+import os
 
 
 class TwitterIngestionTask(IngestionTask):
