@@ -1,9 +1,18 @@
 import yaml
 import os
 
-### This class represents a manager for configuration files
-### that can be invoked via get_config() although it has some
-### predefined api utility functions
+# ===----------------------------------------------------------------------===#
+# ConfigManager                                                              #
+#                                                                            #
+# This class provides utility functions to manage configuration files,       #
+# specifically designed for API configurations. It loads and parses the      #
+# YAML configuration file, making the data accessible through various        #
+# methods. Key methods include retrieving API base URLs, endpoints, and      #
+# authentication credentials. It supports dynamic access to nested config    #
+# data and raises errors when required values are missing.                   #
+#                                                                            #
+# Author: Walter J.T.V                                                       #
+# ===----------------------------------------------------------------------===#
 
 
 class ConfigManager:

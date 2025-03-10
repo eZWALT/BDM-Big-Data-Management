@@ -1,8 +1,13 @@
-from utils import IngestionTask
+from src.utils.client import APIClient
 
 import requests
 import os
 
 
-class BlueSkyIngestionTask(IngestionTask):
+# ===-----------------------------------------------------------------------===#
+# BlueSky API Client                                                          #
+#                                                                             #
+# Author: Marc Parcerisa                                                      #
+# ===-----------------------------------------------------------------------===#
+class BlueSkyAPIClient(APIClient):
     pass

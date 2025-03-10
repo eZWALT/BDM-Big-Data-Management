@@ -11,10 +11,18 @@ class TaskStatus(Enum):
     CANCELLED = "Cancelled"
 
 
-### This file contains the base definitions of abstract task classes related to the
-### Orchestration and structure of the data pipeline
-### UTILITY: These abstract task classes define a standardized interface for pipeline stages, ensuring modular,
-### scalable, and consistent orchestration across different stages.
+# ===----------------------------------------------------------------------===#
+# Task                                                                       #
+#                                                                            #
+# This abstract class defines the foundational structure for tasks within    #
+# an orchestration framework, ensuring a standardized interface for all      #
+# pipeline stages. Tasks can be customized by inheriting and implementing    #
+# the abstract methods `setup()`, `execute()`, `status()`, and `cleanup()`.  #
+# This class enforces modularity, scalability, and consistency in pipeline   #
+# orchestration, providing a base for various task types.                    #
+#                                                                            #
+# Author: Walter J.T.V                                                       #
+# ===----------------------------------------------------------------------===#
 
 
 class Task(ABC):

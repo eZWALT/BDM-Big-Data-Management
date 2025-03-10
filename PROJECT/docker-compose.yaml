@@ -38,16 +38,6 @@ services:
     ports:
       - "5432:5432"
 
-  # Apache Hive (SQL Querying on Data Lake)
-  hive-metastore:
-    image: bde2020/hive:latest
-    depends_on:
-      - postgres
-    environment:
-      - HIVE_METASTORE_DB=postgres
-    ports:
-      - "9083:9083"
-
   # Apache Spark (Processing Engine)
   spark:
     image: bitnami/spark:latest

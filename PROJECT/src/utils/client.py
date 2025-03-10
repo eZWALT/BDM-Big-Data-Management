@@ -2,10 +2,18 @@ from src.utils.config import ConfigManager
 
 from abc import ABC, abstractmethod
 
-### Abstract class for API connectors
-### Each API client (like TwitterAPIClient, YoutubeAPIClient, etc.) will inherit from this class to
-### provide concrete implementations of the API-specific logic.
-### UTILITY: This abstracts the complexity of each individual API handling to a simple interface
+# ===-----------------------------------------------------------------------===#
+# APIClient                                                                   #
+#                                                                             #
+# This abstract class provides a common interface for API connectors. Each    #
+# specific API client (e.g., TwitterAPIClient, YoutubeAPIClient) will inherit #
+# and implement its authentication, connection setup, and data fetching logic.#
+# It includes a generic fetch method with retry logic and exponential backoff.#
+# This class abstracts the complexity of interacting with different APIs,     #
+# simplifying the process for concrete subclasses. Extract methods are the    #
+# main interface for interacting with these classes in a ETL-like fashion     #
+# Author: Walter J.T.V                                                        #
+# ===-----------------------------------------------------------------------===#
 
 
 class APIClient(ABC):
@@ -45,4 +53,9 @@ class APIClient(ABC):
 
         :return: The data retrieved from the API
         """
+        pass
+
+    # high level "extract" data functions (ETL)
+    @abstractmethod
+    def extract(self):
         pass

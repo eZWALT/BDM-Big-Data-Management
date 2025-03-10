@@ -1,5 +1,7 @@
 numpy
 pandas
+loguru
 matplotlib
-pytube
+pytubefix
 black
+pathlib

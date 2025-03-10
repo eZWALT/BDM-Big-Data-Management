@@ -1,8 +1,13 @@
-from utils import IngestionTask
+from src.utils.client import APIClient
 
 import requests
 import os
 
 
-class TwitterIngestionTask(IngestionTask):
+# ===-----------------------------------------------------------------------===#
+# Twitter API Client                                                          #
+#                                                                             #
+# Author: Mateja Zetazalo                                                     #
+# ===-----------------------------------------------------------------------===#
+class TwitterAPIClient(APIClient):
     pass
