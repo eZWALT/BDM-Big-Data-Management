@@ -39,6 +39,17 @@ You can run this project either by setting up the environment locally or using D
 docker-compose up -d
 ```
 
+To make use of this set-up extensively we recommend using the following commands to check and inspectthe state of the applications:
+
+```sh
+docker-compose ps / top
+docker-compose logs -f <service>
+docker-compose exec <service_name> <command>
+docker-compose config
+docker-compose port <service_name> <container_port>
+docker-compose events
+```
+
 ### Social Media API's
 
 > Note that you will need several API keys to fully utilize the infrastructure of this project
