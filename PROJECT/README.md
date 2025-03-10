@@ -39,6 +39,16 @@ You can run this project either by setting up the environment locally or using D
 docker-compose up -d
 ```
 
+The basic structure of this docker compose server is the following, bearing in mind that they share a storage device (through different volumes) and a bridge network:
+1. Apache Airflow: Orchestrator that depends on PostgreSQL
+2. PostgreSQL
+3. Kafka: Streaming ingestor that depends on ZooKeeper
+4. ZooKeeper
+5. Spark Master: 1 master
+6. Spark Workers: up to N workers
+
+Also one can find environment variables defined inside `environment` tag,  `command` and `entrypoint`defines the entrypoint command or actions to perform, `volume` indicates which storage volume is using (storage volumes reside inside the host device)
+
 To make use of this set-up extensively we recommend using the following commands to check and inspectthe state of the applications:
 
 ```sh

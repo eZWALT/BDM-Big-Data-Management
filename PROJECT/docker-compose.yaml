@@ -58,5 +58,13 @@ networks:
   bigdata_network:
     driver: bridge
 
+# TODO: Define which volumes are really needed 
+# Probably will only be persistent storages of db's / filesystems
+# and airflow logs 
 volumes:
-  delta_storage:
+  postgres_storage:
+  kafka_data:
+  hdfs_data:
+  spark_data:
+  airflow_logs:
+  delta_storage: 
