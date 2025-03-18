@@ -1,0 +1,39 @@
+BDM lol:
+- Distributed systems are concurrent computers interconnected via netowrk and message passing. (Characteristics: Concurrency, independent failures and lack of global clock/coordination)
+  The technical challenges are:
+  	1. Scalability
+  	2. Quality of service (Performance / Realiability / Confidentiality)
+  	3. Concurrency
+  	4. Transparency (Doesn't matter the number of nodes, code is the same) (Also make the mechanism transparent to the user)
+  	5. Heterogenity of HW
+  	6. Openness
+  	
+- Cloud database:
+	Given that they don't share Memory nor Disk these devices communicate via NETWORK
+	
+	We can fragment the dataset both vertically (columns is incorrect actually, since you lose the order of keys) using primary key fragmentation. 
+	Horizontal fragmentation needs a sharding condition/column (salary > 700 or city) and then can be joined with just union
+	
+	FRAGMENTATION NEEDS 3 CONDITIONS TO BE CORRECT: ---> Completeness: Every tuple must be assigned to a fragment
+							|---> Disjointness
+							|---> Reconstruction
+							
+							
+EXERCISE FRAGMENTATION
+		STRATEGY 	COMPLETE 	DISJOINT (except id) 	Reconstructuable
+	K	  v               yes              yes				yes (join)
+	T	  h		  no if null value no if null value		yes (union) if no null								
+	R         h		  idem	           idem				idem
+	
+	
+EXERCISE DISTRIBUTION
+	a) Total time = transfer time + latency time = 1 tb / 100 mb/s + 5 * 10^-3 = 10.000s 
+	b) total time = 100 bytes / 100 mb/s + 5ms = 5ms more or less
+	
+	now shared cpu
+	c) Total time = transfertime / num_workers + latency = 
+	
+	now shared nothing arch
+	e) Total time = transfertime / num_workers + disk latency + lan latency 
+	
+	Take away: network is shit

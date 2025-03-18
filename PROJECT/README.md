@@ -60,6 +60,16 @@ docker-compose port <service_name> <container_port>
 docker-compose events
 ```
 
+### Front-end 
+
+In order to make use of front-end to visualize and inspect the data management pipeline, filesystem and dashboards run the docker image or locally run streamlit
+
+```sh
+
+streamlit run src/frontend/home.py
+xdg-open http://localhost:8501  # Open the browser in Ubuntu
+```
+
 ### Social Media API's
 
 > Note that you will need several API keys to fully utilize the infrastructure of this project
