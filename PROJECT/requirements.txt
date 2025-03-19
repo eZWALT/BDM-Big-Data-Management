@@ -4,12 +4,11 @@ loguru==0.7.3
 matplotlib==3.10.0
 pytubefix==8.12.2
 black==25.1.0
-pathlib==0.20.0
+pathlib
 streamlit==1.42.0
-sqlalchemy==2.0.39
-pyyaml==6.0
-
-psycopg2
+SQLAlchemy==1.4.53
+pyyaml
+psycopg2==2.9.10
 apache-airflow[postgres]==2.10
-kafka-python==2.10
+kafka-python==2.1.0
 pyspark==3.5.5

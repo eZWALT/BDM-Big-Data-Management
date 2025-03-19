@@ -1,32 +1,26 @@
 services:
-  # Zookeeper (Required for Kafka)
-  zookeeper:
-    image: bitnami/zookeeper:latest
-    environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
-    ports:
-      - "2181:2181"
+  #For now kafka and zookeeper aren't needed at all, so they are disabled
 
-  # Kafka (Streaming Platform)
-  kafka:
-    image: bitnami/kafka:latest
-    depends_on:
-      - zookeeper
-    environment:
-      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-      - ALLOW_PLAINTEXT_LISTENER=yes
-    ports:
-      - "9092:9092"
+  # # Zookeeper (Required for Kafka)
+  # zookeeper:
+  #   image: bitnami/zookeeper:latest
+  #   environment:
+  #     - ALLOW_ANONYMOUS_LOGIN=yes
+  #   ports:
+  #     - "2181:2181"
 
-  # HDFS (Storage Layer)
-  hdfs:
-    image: bde2020/hadoop-namenode:latest
-    environment:
-      - CLUSTER_NAME=hadoop_cluster
-    ports:
-      - "9870:9870"
+  # # Kafka (Streaming Platform)
+  # kafka:
+  #   image: bitnami/kafka:latest
+  #   depends_on:
+  #     - zookeeper
+  #   environment:
+  #     - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+  #     - ALLOW_PLAINTEXT_LISTENER=yes
+  #   ports:
+  #     - "9092:9092"
 
-  # PostgreSQL (Metadata Store)
+  # PostgreSQL (Metadata Store + Airflow)
   postgres:
     image: postgres:latest
     environment:
@@ -36,7 +30,8 @@ services:
     ports:
       - "5432:5432"
 
-  # Apache Spark (Processing Engine)
+  # Apache Spark (Master node)
+  # HDFS + Delta lake are contained inside this image
   spark:
     image: bitnami/spark:latest
     environment:
@@ -44,9 +39,12 @@ services:
     ports:
       - "7077:7077"
 
+  # Missing Apache Spark (workers)
+
   # Apache Airflow (Workflow Orchestration)
+  # Fixed version 2.10.0 to avoid nightmares with SQLAlchemy and other packages
   airflow:
-    image: apache/airflow:latest
+    image: apache/airflow:2.10.0
     depends_on:
       - postgres
     environment:
@@ -63,8 +61,6 @@ networks:
 # and airflow logs 
 volumes:
   postgres_storage:
-  kafka_data:
-  hdfs_data:
+  #kafka_data:
   spark_data:
   airflow_logs:
-  delta_storage: 
