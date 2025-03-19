@@ -1,8 +1,9 @@
-from src.utils.client import APIClient
+# from src.utils.client import APIClient
 
 import requests
 import os
 import tweepy
+import json
 
 # ===-----------------------------------------------------------------------===#
 # Twitter API Client                                                          #
@@ -106,7 +107,16 @@ def main():
     
     # Fetch historical data
     tweets = fetch_tweets(recent_url, "Jordan", bearer_token)
-    print(tweets)
+    #print(tweets)
+    if tweets and 'data' in tweets:
+        print(json.dumps(tweets['data'][0], indent=4))  # Pretty print the first tweet
+
+    # Fetch replies to the tweets
+    tweet_replies = {}
+    print("Tweet: ", tweets[0])
+    #for tweet in tweets:
+        #replies = fetch_replies(tweet['id'], bearer_token)
+        #tweet_replies[tweet['id']] = replies
 
 
 if __name__ == "__main__":
