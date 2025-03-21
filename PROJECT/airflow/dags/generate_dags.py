@@ -3,7 +3,7 @@ from typing import List
 from datetime import datetime, timedelta
 from loguru import logger
 from src.utils.company import Company, TrackingTier, deserialize_companies_from_json
-from dag_factory import (
+from airflow.dags.dag_factory import (
     create_batch_product_tracking_dag,
     create_stream_product_tracking_dag,
     create_dummy_test_dag,
@@ -31,7 +31,7 @@ def generate_dynamic_dags_from_serialized_companies(
 
     for company in companies:
         for i, product in enumerate(company.products):
-            dag_id = company.get_dag_id(
+            dag_id = company.generate_usecase_dag_id(
                 i
             )  # Create a unique DAG ID for each product of a company
 
@@ -53,5 +53,5 @@ def generate_dynamic_dags_from_serialized_companies(
 
 if __name__ == "__main__":
     generate_dynamic_dags_from_serialized_companies(
-        "./companies.json", streaming=False, is_test=True
+        "airflow/dags/companies.json", streaming=False, is_test=True
     )

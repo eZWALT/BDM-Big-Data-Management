@@ -1,7 +1,7 @@
 from typing import List
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.operatos.dummy_operator import DummyOperator
+from airflow.operators.dummy_operator import DummyOperator
 from datetime import datetime, timedelta, date
 import psycopg2
 
@@ -34,7 +34,7 @@ def initialize_dag_from_company(company: Company, prod_idx: int) -> DAG:
 
     # Create the DAG
     dag = DAG(
-        dag_id=company.get_dag_id(prod_idx),
+        dag_id=company.generate_usecase_dag_id(prod_idx),
         description=f"Tracking Vibe for {product.product_name} of {company.company_id}",
         schedule_interval=schedule_interval,
         start_date=start_date,

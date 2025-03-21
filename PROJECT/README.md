@@ -19,10 +19,17 @@ VibeRadar provides real-time and historical long-term analysis of product impres
 The following tech stack has been used solely using open source big data solutions:
 
 ## Tech Stack
-WIP 
+This topic is still a work-in-progress section:
 
 - **Python**
 - **Docker** 
+- **Apache Kafka**
+- **Apache ZooKeeper**
+- **Jupyter**
+- **DeltaLake**
+- **Apache Spark**
+- **Apache Airflow**
+- **Streamlit**
 
 ## Design 
 

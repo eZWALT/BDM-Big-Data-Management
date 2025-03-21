@@ -49,6 +49,9 @@ class YoutubeAPIClient(APIClient):
     def connect(self):
         logger.success("Successfully connected to YouTube API!")
 
+    def extract(self):
+        return super().extract()
+
     def fetch(
         self,
         endpoint: str,

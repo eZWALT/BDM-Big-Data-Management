@@ -12,3 +12,4 @@ psycopg2==2.9.10
 apache-airflow[postgres]==2.10
 kafka-python==2.1.0
 pyspark==3.5.5
+delta-spark==3.3.0

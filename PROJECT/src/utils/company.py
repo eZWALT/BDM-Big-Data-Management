@@ -90,7 +90,7 @@ class Company:
 
     ################## AIRFLOW HELPER FUNCTIONS ##################
 
-    def generate_basic_usecase_name(self, prod_idx: int) -> str:
+    def generate_usecase_dag_id(self, prod_idx: int) -> str:
         if 0 <= prod_idx < len(self.products):
             product = self.products[prod_idx]
             return f"{self.company_id}_{product.name}"

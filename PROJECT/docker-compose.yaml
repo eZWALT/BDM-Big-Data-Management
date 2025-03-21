@@ -2,16 +2,22 @@ services:
   #For now kafka and zookeeper aren't needed at all, so they are disabled
 
   # # Zookeeper (Required for Kafka)
+  # # Fixed 3.9.3 version
   # zookeeper:
-  #   image: bitnami/zookeeper:latest
+  #   image: bitnami/zookeeper:3.9.3
+  #   networks:
+  #     - bigdata_network
   #   environment:
   #     - ALLOW_ANONYMOUS_LOGIN=yes
   #   ports:
   #     - "2181:2181"
 
   # # Kafka (Streaming Platform)
+  # # Fixed 3.9.0 version
   # kafka:
-  #   image: bitnami/kafka:latest
+  #   image: bitnami/kafka:3.9.0
+  #   networks:
+  #     - bigdata_network
   #   depends_on:
   #     - zookeeper
   #   environment:
@@ -20,47 +26,167 @@ services:
   #   ports:
   #     - "9092:9092"
 
-  # PostgreSQL (Metadata Store + Airflow)
-  postgres:
-    image: postgres:latest
-    environment:
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=admin
-      - POSTGRES_DB=metadata_db
-    ports:
-      - "5432:5432"
+  # # PostgreSQL (Metadata Store + Airflow)
+  # postgres:
+  #   image: postgres:17-alpine
+  #   networks:
+  #     - bigdata_network
+  #   # TODO: Define volumes for postgres
+  #   volumes:
+  #     - ~/apps/postgres:/var/lib/postgresql/data
+  #   environment:
+  #     - POSTGRES_USER=airflow
+  #     - POSTGRES_PASSWORD=airflow
+  #     - POSTGRES_DB=airflow
+  #   ports:
+  #     - "5432:5432"
+
+  # # Apache Airflow (Workflow Orchestration)
+  # # Fixed version 2.10.0 to avoid nightmares with SQLAlchemy and other packages
+  # # However airflow runs multiple processes:
+  # # 1. Scheduler
+  # # 2. Webserver
+  # # 3. Worker (Only if we needed to use CeleryExecutor for distributed)
+  # airflow-scheduler:
+  #   image: apache/airflow:2.10.0
+  #   restart: always
+  #   networks:
+  #     - bigdata_network
+  #   depends_on:
+  #     - postgres
+  #   environment:
+  #     - LOAD_EX=n 
+  #     - EXECUTOR=Local 
+  #     - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://admin:airflow@postgres:5432/metadata_db
+  #   ports:
+  #     - "8080:8080"
+  #   volumes:
+  #     # DAG Folder 
+  #     - ./airflow/dags:/user/local/airflow/dags
+  #     # Spark Script folder (same path as airflow)
+  #     - ./spark/app:/usr/local/spark/app
+  #     # Spark Resources folder (same path as airflow)
+  #     - ./spark/resource:/usr/local/spark/resources 
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+  #     interval: 30s 
+  #     timeout: 30s 
+  #     retries: 2
+  #   command: scheduler
+
+  # airflow-webserver:
+  #   image: apache/airflow:2.10.0
+  #   restart: always
+  #   networks:
+  #       - bigdata_network
+  #   depends_on:
+  #       - postgres
+  #       - airflow-scheduler
+  #   environment:
+  #       - LOAD_EX=n
+  #       - EXECUTOR=Local 
+  #   volumes:
+  #       - ../dags:/usr/local/airflow/dags
+  #       - ../spark/app:/usr/local/spark/app
+  #       - ../spark/resources:/usr/local/spark/resources
+  #   ports:
+  #       - "8282:8282"
+  #   command: webserver
+  #   healthcheck:
+  #       test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+  #       interval: 30s
+  #       timeout: 30s
+  #       retries: 3
 
   # Apache Spark (Master node)
   # HDFS + Delta lake are contained inside this image
-  spark:
-    image: bitnami/spark:latest
+  spark-master:
+    image: bitnami/spark:3.5.5
+    user: root
+    container_name: spark-master
+    networks:
+      - bigdata_network
     environment:
       - SPARK_MODE=master
+      # Avoid letting lil spark cook
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
     ports:
-      - "7077:7077"
+        - "7077:7077"
+        - "8181:8080"
+    volumes:
+      # Spark Script folder (same path as airflow)
+      - ./spark/app:/usr/local/spark/app
+      # Spark Resources folder (same path as airflow)
+      - ./spark/resource:/usr/local/spark/resources 
+    command: |
+      --packages io.delta:delta-core_2.12:1.1.0
 
-  # Missing Apache Spark (workers)
-
-  # Apache Airflow (Workflow Orchestration)
-  # Fixed version 2.10.0 to avoid nightmares with SQLAlchemy and other packages
-  airflow:
-    image: apache/airflow:2.10.0
+  # Apache Spark Workers (x2)
+  spark-worker-1:
+    container_name: spark-worker-1
+    user: root 
+    networks:
+      - bigdata_network
+    image: bitnami/spark:3.5.5
+    environment: 
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=500M
+      - SPARK_WORKER_CORES=1
+      # Avoid letting lil spark cook
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
     depends_on:
-      - postgres
-    environment:
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://admin:admin@postgres:5432/metadata_db
-    ports:
-      - "8080:8080"
+      - spark-master
+    volumes:
+      # Spark Script folder (same path as airflow)
+      - ./spark/app:/usr/local/spark/app
+      # Spark Resources folder (same path as airflow)
+      - ./spark/resource:/usr/local/spark/resources 
+
+  spark-worker-2:
+    container_name: spark-worker-2
+    user: root 
+    networks:
+      - bigdata_network
+    image: bitnami/spark:3.5.5
+    environment: 
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=500M
+      - SPARK_WORKER_CORES=1
+      # Avoid letting lil spark cook
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    depends_on:
+      - spark-master
+    volumes:
+      # Spark Script folder (same path as airflow)
+      - ./spark/app:/usr/local/spark/app
+      # Spark Resources folder (same path as airflow)
+      - ./spark/resource:/usr/local/spark/resources 
+  # # Run a notebook separate container that connects to spark
+  # jupyter-spark:
+  #   image: jupyter/pyspark-notebook:spark-3.5.5
+  #   networks:
+  #     - bigdata_network
+  #   ports:
+  #     - "8888:8888"
+  #     - "4040-4080:4040-4080"
+  #   volumes:
+  #     - ./notebooks:/home/notebooks 
+  #     - ./spark/resources/data
+  #     - ./spark/resources/jars
 
 networks:
   bigdata_network:
     driver: bridge
 
-# TODO: Define which volumes are really needed 
-# Probably will only be persistent storages of db's / filesystems
-# and airflow logs 
-volumes:
-  postgres_storage:
-  #kafka_data:
-  spark_data:
-  airflow_logs:
+# TODO: Define which volumes are needed
