@@ -13,3 +13,4 @@ apache-airflow[postgres]==2.10
 kafka-python==2.1.0
 pyspark==3.5.5
 tweepy==4.15.0
+atproto==0.0.59
