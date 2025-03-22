@@ -4,6 +4,7 @@ import requests
 import os
 import tweepy
 import json
+import time
 
 # ===-----------------------------------------------------------------------===#
 # Twitter API Client                                                          #
@@ -29,14 +30,18 @@ def fetch_tweets(recent_url, keyword, bearer_token):
 
     # Specify tweet fields to be included in the response
     # can include 'lang' as in language as well etc.
-    tweet_fields = "tweet.fields=author_id,created_at,public_metrics"      
+    tweet_fields = "author_id,created_at,public_metrics"      
 
     headers = {"Authorization": f"Bearer {bearer_token}"}
-    params = {"query": keyword, "max_results": "10", "tweet_fields": tweet_fields}
+    params = {"query": keyword, "max_results": "10", "tweet.fields": tweet_fields}
 
     response = requests.get(recent_url, headers=headers, params=params)
     if response.status_code == 200:
         return response.json()
+    elif response.status_code == 429:
+        handle_rate_limit(response)
+        # Retry the request after rate limit handling
+        return fetch_tweets(recent_url, keyword, bearer_token) 
     else:
         return response.status_code, response.text
     
@@ -70,28 +75,41 @@ def fetch_replies(recent_url, tweet_id, author_id, bearer_token):
     # Query for getting tweets referenced to original tweet (reply)
     # tweet_id is the ID of original tweet
     query = f"conversation_id:{tweet_id} to:{author_id}"
-    tweet_fields = "tweet.fields=created_at,author_id"
+    tweet_fields = "created_at,author_id"
     headers = {"Authorization": f"Bearer {bearer_token}"}
     params = {
         "query": query,
-        "tweet_fields": tweet_fields,
-        "max_results": "100"
+        "tweet.fields": tweet_fields,
+        "max_results": "10"
     }
 
     response = requests.get(recent_url, headers=headers, params=params)
     if response.status_code == 200:
         return response.json()
+    elif response.status_code == 429:
+        handle_rate_limit(response)
+        # Retry the request after rate limit handling
+        return fetch_replies(recent_url, tweet_id, author_id, bearer_token)
     else:
         print(response.status_code, response.text)
+
+# Use this function after catching a 'Too many requests' response
+def handle_rate_limit(response):
+    if response.status_code == 429:
+        reset_time = int(response.headers.get('X-Rate-Limit-Reset', time.time())) + 5  
+        sleep_time = reset_time - time.time()
+        if sleep_time > 0:
+            print(f"Limit exceeded. Sleeping for {sleep_time} seconds.")
+            time.sleep(sleep_time)
 
     
 def main():
     # API keys and tokens
-    consumer_key = 'GCVwCztxrvicfjLhoiOK7HgKu'
-    consumer_secret = 'mwbvm9nDsHOZ1l59MPw5kvFdcgYr8ooQRjVh8LAc8U88sBdV7K'
-    bearer_token = 'AAAAAAAAAAAAAAAAAAAAAJ05zgEAAAAAXrxXMn8qfKBzpo7uKVrS6I0iPDM%3DctS3xKFHN5Uee9H544KiEuX7RQBhJFKqzgNlKk7hcPc18Noqta'
-    access_token_secret = 'q7BMvNzxbBW4jeUvTFXBLd55TAvLuEldfxCQfRYAEVBpG'
-    access_token = '1894441990378721280-2Nml1hRlQtKsG4JvZ0BOp86y6N1wim'
+    consumer_key = os.getenv('consumer_key')
+    consumer_secret = os.getenv('consumer_secret')
+    bearer_token = os.getenv('bearer_token')
+    access_token_secret = os.getenv('access_token_secret')
+    access_token = os.getenv('access_token')
 
     # URL for recent tweets
     recent_url = "https://api.twitter.com/2/tweets/search/recent"
@@ -106,18 +124,20 @@ def main():
     # setup_stream(auth, keywords)
     
     # Fetch historical data
-    tweets = fetch_tweets(recent_url, "Jordan", bearer_token)
+    tweets = fetch_tweets(recent_url, "AirJordan", bearer_token)
     #print(tweets)
     if tweets and 'data' in tweets:
-        print(json.dumps(tweets['data'][0], indent=4))  # Pretty print the first tweet
+        print(json.dumps(tweets['data'][0], indent=4))  
 
     # Fetch replies to the tweets
     tweet_replies = {}
-    print("Tweet: ", tweets[0])
-    #for tweet in tweets:
-        #replies = fetch_replies(tweet['id'], bearer_token)
-        #tweet_replies[tweet['id']] = replies
-
+    if 'data' in tweets:
+      for tweet in tweets['data']:  # Correctly accessing the list of tweets
+          replies = fetch_replies(recent_url, tweet['author_id'], tweet['id'], bearer_token)  # Fetching replies using the tweet ID
+          tweet_replies[tweet['id']] = replies
+          print("Tweet ID:", tweet['id'], "Replies:", replies)
+    else:
+        print("No data found or incorrect data structure.")
 
 if __name__ == "__main__":
     main()
