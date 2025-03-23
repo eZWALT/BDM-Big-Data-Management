@@ -570,19 +570,20 @@ def print_post_record(
     _print = _create_print_function(print_fn, indent)
     _print(f"Created At: {record.created_at}")
     _print(f"Text: {record.text}")
-    _print(f"Embed:")
-    if isinstance(record.embed, models.AppBskyEmbedExternal.Main):
-        print_embed_external_main(record.embed, print_fn=print_fn, indent=indent + 4)
-    elif isinstance(record.embed, models.AppBskyEmbedImages.Main):
-        print_embed_images_main(record.embed, print_fn=print_fn, indent=indent + 4)
-    elif isinstance(record.embed, models.AppBskyEmbedVideo.Main):
-        print_embed_video_main(record.embed, print_fn=print_fn, indent=indent + 4)
-    elif isinstance(record.embed, models.AppBskyEmbedRecord.Main):
-        print_embed_record_main(record.embed, print_fn=print_fn, indent=indent + 4)
-    elif isinstance(record.embed, models.AppBskyEmbedRecordWithMedia.Main):
-        print_embed_record_with_media_main(record.embed, print_fn=print_fn, indent=indent + 4)
+    if record.embed:
+        _print(f"Embed:")
+        if isinstance(record.embed, models.AppBskyEmbedExternal.Main):
+            print_embed_external_main(record.embed, print_fn=print_fn, indent=indent + 4)
+        elif isinstance(record.embed, models.AppBskyEmbedImages.Main):
+            print_embed_images_main(record.embed, print_fn=print_fn, indent=indent + 4)
+        elif isinstance(record.embed, models.AppBskyEmbedVideo.Main):
+            print_embed_video_main(record.embed, print_fn=print_fn, indent=indent + 4)
+        elif isinstance(record.embed, models.AppBskyEmbedRecord.Main):
+            print_embed_record_main(record.embed, print_fn=print_fn, indent=indent + 4)
+        elif isinstance(record.embed, models.AppBskyEmbedRecordWithMedia.Main):
+            print_embed_record_with_media_main(record.embed, print_fn=print_fn, indent=indent + 4)
     else:
-        print_fn(" " * (indent + 4) + f"Unknown embed type: {type(record.embed)}")
+        print_fn("Embed: None")
     _print(f"Entities: {record.entities}")
     if record.facets:
         _print(f"Facets:")
