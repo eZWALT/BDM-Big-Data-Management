@@ -4,6 +4,13 @@ from atproto import models
 from atproto_client.models import blob_ref as blob_models
 
 
+def _create_print_function(print_fn: Callable[[str], None], indent: int):
+    def _print(x: str):
+        print_fn(" " * indent + x)
+
+    return _print
+
+
 def print_viewer_state(
     viewer: models.AppBskyActorDefs.ViewerState,
     print_fn: Optional[Callable[[str], None]] = print,
@@ -15,7 +22,7 @@ def print_viewer_state(
     Args:
         viewer (models.AppBskyActorDefs.ViewerState): The viewer state to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Blocked By: {viewer.blocked_by}")
     _print(f"Blocking: {viewer.blocking}")
     _print(f"Blocking By List: {viewer.blocking_by_list}")
@@ -38,7 +45,7 @@ def print_profile_basic(
     Args:
         profile (models.AppBskyActorDefs.ProfileViewBasic): The profile to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Did: {profile.did}")
     _print(f"Handle: {profile.handle}")
     _print(f"Associated: {profile.associated}")
@@ -62,7 +69,7 @@ def print_ipld_link(
     Args:
         link (models.IpldLink): The IPLD link to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Link: {link.link}")
 
 
@@ -77,7 +84,7 @@ def print_blob_ref(
     Args:
         blob_ref (models.AppBskyEmbedExternal.BlobRef): The blob reference to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Mime Type: {blob_ref.mime_type}")
     _print(f"Size: {blob_ref.size}")
     _print(f"Ref:")
@@ -95,7 +102,7 @@ def print_embed_external_external(
     Args:
         view (models.AppBskyEmbedExternal.View): The view details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Description: {view.description}")
     _print(f"Title: {view.title}")
     _print(f"Uri: {view.uri}")
@@ -117,7 +124,7 @@ def print_embed_external_main(
     Args:
         embed (models.AppBskyEmbedExternal.Main): The embed details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"External:")
     print_embed_external_external(embed.external, print_fn=print_fn, indent=indent + 4)
     _print(f"Py Type: {embed.py_type}")
@@ -133,7 +140,7 @@ def print_embed_external_view_external(
     Args:
         embed (models.AppBskyEmbedExternal.Main): The embed details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Description: {embed.description}")
     _print(f"Title: {embed.title}")
     _print(f"Uri: {embed.uri}")
@@ -151,7 +158,7 @@ def print_embed_external_view(
     Args:
         embed (models.AppBskyEmbedExternal.Main): The embed details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"External:")
     print_embed_external_view_external(embed.external, print_fn=print_fn, indent=indent + 4)
     _print(f"Py Type: {embed.py_type}")
@@ -167,7 +174,7 @@ def print_embed_image(
     Args:
         image (models.AppBskyEmbedImages.Image): The image details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
 
     _print(f"Alt: {image.alt}")
     _print(f"Aspect Ratio: {image.aspect_ratio}")
@@ -186,7 +193,7 @@ def print_embed_images_main(
     Args:
         embed (models.AppBskyEmbedImages.Main): The embed details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Images:")
     for j, image in enumerate(embed.images):
         _print(f"    Image {j}:")
@@ -204,7 +211,7 @@ def print_embed_image_view_image(
     Args:
         image (models.AppBskyEmbedImages.Image): The image details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
 
     _print(f"Alt: {image.alt}")
     _print(f"Aspect Ratio: {image.aspect_ratio}")
@@ -223,7 +230,7 @@ def print_embed_images_view(
     Args:
         embed (models.AppBskyEmbedImages.Main): The embed details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Images:")
     for j, image in enumerate(embed.images):
         _print(f"    Image {j}:")
@@ -241,7 +248,7 @@ def print_embed_video_caption(
     Args:
         caption (models.AppBskyEmbedVideo.Caption): The caption details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"File:")
     print_blob_ref(caption.file, print_fn=print_fn, indent=indent + 4)
     _print(f"Lang: {caption.lang}")
@@ -258,7 +265,7 @@ def print_embed_video_main(
     Args:
         embed (models.AppBskyEmbedVideo.Main): The embed details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Video:")
     print_blob_ref(embed.video, print_fn=print_fn, indent=indent + 4)
     _print(f"Alt: {embed.alt}")
@@ -283,7 +290,7 @@ def print_embed_video_view(
     Args:
         embed (models.AppBskyEmbedVideo.Main): The embed details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Cid: {embed.cid}")
     _print(f"Playlist: {embed.playlist}")
     _print(f"Alt: {embed.alt}")
@@ -302,10 +309,54 @@ def print_com_atproto_repo_strong_ref(
     Args:
         ref (models.ComAtprotoRepoStrongRef.Main): The strong reference to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Cid: {ref.cid}")
     _print(f"Uri: {ref.uri}")
     _print(f"Py Type: {ref.py_type}")
+
+
+def print_embed_record_view_record(
+    embed: models.AppBskyEmbedRecord.ViewRecord,
+    print_fn: Optional[Callable[[str], None]] = print,
+    indent: int = 0,
+):
+    """
+    Print the embed main details of a record embed.
+    Args:
+        embed (models.AppBskyEmbedRecord.Main): The embed details to print.
+    """
+    _print = _create_print_function(print_fn, indent)
+    _print(f"Author:")
+    print_profile_basic(embed.author, print_fn=print_fn, indent=indent + 4)
+    _print(f"Cid: {embed.cid}")
+    _print(f"Indexed At: {embed.indexed_at}")
+    _print(f"Uri: {embed.uri}")
+    _print(f"Value: {embed.value}")
+    if embed.embeds:
+        _print(f"Embeds:")
+        for j, embed_item in enumerate(embed.embeds):
+            _print(f"    Embed {j}:")
+            if isinstance(embed_item, models.AppBskyEmbedImages.View):
+                print_embed_images_view(embed_item, print_fn=print_fn, indent=indent + 8)
+            elif isinstance(embed_item, models.AppBskyEmbedVideo.View):
+                print_embed_video_view(embed_item, print_fn=print_fn, indent=indent + 8)
+            elif isinstance(embed_item, models.AppBskyEmbedExternal.View):
+                print_embed_external_view(embed_item, print_fn=print_fn, indent=indent + 8)
+            elif isinstance(embed_item, models.AppBskyEmbedRecord.View):
+                print_embed_record_view(embed_item, print_fn=print_fn, indent=indent + 8)
+            elif isinstance(embed_item, models.AppBskyEmbedRecordWithMedia.View):
+                print_embed_record_with_media_view(embed_item, print_fn=print_fn, indent=indent + 8)
+            else:
+                _print(f"        Unknown embed type: {type(embed_item)}")
+
+    else:
+        _print(f"Embeds: None")
+    _print(f"Labels: {embed.labels}")
+    _print(f"Like Count: {embed.like_count}")
+    _print(f"Quote Count: {embed.quote_count}")
+    _print(f"Reply Count: {embed.reply_count}")
+    _print(f"Repost Count: {embed.repost_count}")
+    _print(f"Py Type: {embed.py_type}")
 
 
 def print_embed_record_view(
@@ -318,8 +369,26 @@ def print_embed_record_view(
     Args:
         embed (models.AppBskyEmbedRecord.Main): The embed details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
-    _print(f"Record: {embed.record}")
+    _print = _create_print_function(print_fn, indent)
+    if isinstance(embed.record, models.AppBskyEmbedRecord.ViewRecord):
+        _print(f"Record:")
+        print_embed_record_view_record(embed.record, print_fn=print_fn, indent=indent + 4)
+    elif isinstance(embed.record, models.AppBskyEmbedRecord.ViewNotFound):
+        _print(f"Record: Not Found")
+    elif isinstance(embed.record, models.AppBskyEmbedRecord.ViewBlocked):
+        _print(f"Record: Blocked")
+    elif isinstance(embed.record, models.AppBskyEmbedRecord.ViewDetached):
+        _print(f"Record: ViewDetached({embed.record})")
+    elif isinstance(embed.record, models.AppBskyFeedDefs.GeneratorView):
+        _print(f"Record: GeneratorView({embed.record})")
+    elif isinstance(embed.record, models.AppBskyGraphDefs.ListView):
+        _print(f"Record: ListView({embed.record})")
+    elif isinstance(embed.record, models.AppBskyLabelerDefs.LabelerView):
+        _print(f"Record: LabelerView({embed.record})")
+    elif isinstance(embed.record, models.AppBskyGraphDefs.StarterPackViewBasic):
+        _print(f"Record: StarterPackViewBasic({embed.record})")
+    else:
+        _print(f"Record: Unknown Type ({embed.record})")
     _print(f"Py Type: {embed.py_type}")
 
 
@@ -333,7 +402,7 @@ def print_embed_record_main(
     Args:
         embed (models.AppBskyEmbedRecord.Main): The embed details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Record:")
     print_com_atproto_repo_strong_ref(embed.record, print_fn=print_fn, indent=indent + 4)
     _print(f"Py Type: {embed.py_type}")
@@ -349,7 +418,7 @@ def print_embed_record_with_media_view(
     Args:
         embed (models.AppBskyEmbedRecordWithMedia.Main): The embed details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Media:")
     if isinstance(embed.media, models.AppBskyEmbedImages.View):
         print_embed_images_view(embed.media, print_fn=print_fn, indent=indent + 4)
@@ -372,7 +441,7 @@ def print_embed_record_with_media_main(
     Args:
         embed (models.AppBskyEmbedRecordWithMedia.Main): The embed details to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Media:")
     if isinstance(embed.media, models.AppBskyEmbedImages.Main):
         print_embed_images_main(embed.media, print_fn=print_fn, indent=indent + 4)
@@ -396,7 +465,7 @@ def print_byte_slice(
     Args:
         byte_slice (models.AppBskyRichtextFacet.ByteSlice): The byte slice to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Byte End: {byte_slice.byte_end}")
     _print(f"Byte Start: {byte_slice.byte_start}")
     _print(f"Py Type: {byte_slice.py_type}")
@@ -413,7 +482,7 @@ def print_rich_text_facet_link(
     Args:
         facet (models.AppBskyRichtextFacet.Link): The facet to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Uri: {facet.uri}")
     _print(f"Py Type: {facet.py_type}")
 
@@ -429,7 +498,7 @@ def print_rich_text_facet_main(
     Args:
         facet (models.AppBskyRichTextFacet.Main): The facet to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Features:")
     for j, feature in enumerate(facet.features):
         _print(f"    Feature {j}:")
@@ -443,6 +512,25 @@ def print_rich_text_facet_main(
     _print(f"Py Type: {facet.py_type}")
 
 
+def print_post_reply_ref(
+    reply: models.AppBskyFeedPost.ReplyRef,
+    print_fn: Optional[Callable[[str], None]] = print,
+    indent: int = 0,
+):
+    """
+    Print the reply reference details.
+
+    Args:
+        reply (models.AppBskyFeedPost.ReplyRef): The reply reference to print.
+    """
+    _print = _create_print_function(print_fn, indent)
+    _print(f"Parent:")
+    print_com_atproto_repo_strong_ref(reply.parent, print_fn=print_fn, indent=indent + 4)
+    _print(f"Root:")
+    print_com_atproto_repo_strong_ref(reply.root, print_fn=print_fn, indent=indent + 4)
+    _print(f"Py Type: {reply.py_type}")
+
+
 def print_post_record(
     record: models.AppBskyFeedPost.Record,
     print_fn: Optional[Callable[[str], None]] = print,
@@ -454,7 +542,7 @@ def print_post_record(
     Args:
         record (models.AppBskyFeedDefs.Post): The record to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Created At: {record.created_at}")
     _print(f"Text: {record.text}")
     _print(f"Embed:")
@@ -480,9 +568,29 @@ def print_post_record(
         _print(f"Facets: None")
     _print(f"Labels: {record.labels}")
     _print(f"Langs: {record.langs}")
-    _print(f"Reply: {record.reply}")
+    if record.reply:
+        _print(f"Reply:")
+        print_post_reply_ref(record.reply, print_fn=print_fn, indent=indent + 4)
+    else:
+        _print(f"Reply: None")
     _print(f"Tags: {record.tags}")
     _print(f"Py Type: {record.py_type}")
+
+
+def print_thread_view_context(
+    context: models.AppBskyFeedDefs.ThreadContext,
+    print_fn: Optional[Callable[[str], None]] = print,
+    indent: int = 0,
+):
+    """
+    Print the details of a thread view context.
+
+    Args:
+        context (models.AppBskyFeedDefs.ThreadContext): The thread view context to print.
+    """
+    _print = _create_print_function(print_fn, indent)
+    _print(f"Root Author Like: {context.root_author_like}")
+    _print(f"Py Type: {context.py_type}")
 
 
 def print_post(
@@ -496,7 +604,7 @@ def print_post(
     Args:
         post (models.AppBskyFeedDefs.PostView): The post to print.
     """
-    _print = lambda x: print_fn(" " * indent + str(x))
+    _print = _create_print_function(print_fn, indent)
     _print(f"Author:")
     print_profile_basic(post.author, print_fn=print_fn, indent=indent + 4)
     _print(f"Cid: {post.cid}")
@@ -525,3 +633,49 @@ def print_post(
     _print(f"Threadgate: {post.threadgate}")
     _print(f"URI: {post.uri}")
     _print(f"Viewer: {post.viewer}")
+
+
+def print_thread_view_post(
+    thread_view: models.AppBskyFeedDefs.ThreadViewPost,
+    print_fn: Optional[Callable[[str], None]] = print,
+    indent: int = 0,
+):
+    """
+    Print the details of a thread view post.
+
+    Args:
+        post (models.AppBskyFeedDefs.ThreadViewPost): The thread view post to print.
+    """
+    _print = _create_print_function(print_fn, indent)
+    if thread_view.parent:
+        if isinstance(thread_view.parent, models.AppBskyFeedDefs.NotFoundPost):
+            _print(f"Parent: Not Found")
+        elif isinstance(thread_view.parent, models.AppBskyFeedDefs.BlockedPost):
+            _print(f"Parent: Blocked")
+        else:
+            _print(f"Parent:")
+            print_thread_view_post(thread_view.parent, print_fn=print_fn, indent=indent + 4)
+    else:
+        _print(f"Parent: None")
+    _print(f"Post:")
+    print_post(thread_view.post, print_fn=print_fn, indent=indent + 4)
+    if thread_view.replies:
+        _print(f"Replies:")
+        for j, reply in enumerate(thread_view.replies):
+            if isinstance(reply, models.AppBskyFeedDefs.NotFoundPost):
+                _print(f"    Reply {j}: Not Found")
+            elif isinstance(reply, models.AppBskyFeedDefs.BlockedPost):
+                _print(f"    Reply {j}: Blocked")
+            else:
+                _print(f"    Reply {j}:")
+                print_thread_view_post(reply, print_fn=print_fn, indent=indent + 8)
+    else:
+        _print(f"Replies: None")
+
+    if thread_view.thread_context:
+        _print(f"Thread Context:")
+        print_thread_view_context(thread_view.thread_context, print_fn=print_fn, indent=indent + 4)
+    else:
+        _print(f"Thread Context: None")
+
+    _print(f"Py Type: {thread_view.py_type}")

@@ -1,13 +1,12 @@
 import os
 import sys
-from typing import Callable, List, Literal, Optional, Union
+from typing import List, Literal, Optional, Union
 
-from atproto import Client, client_utils, models
+from atproto import Client, models
 from loguru import logger
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from src.ingestion.bluesky_prints import print_post
-from src.utils.client import APIClient
+from src.ingestion.bluesky_prints import print_thread_view_post
 from src.utils.config import ConfigManager
 
 
@@ -139,6 +138,34 @@ class BlueSkyAPIClient(object):
             total_posts += len(response.posts)
         return posts, response.cursor
 
+    def get_post_thread(
+        self, uri: str, depth: Optional[int] = None, parent_height: Optional[int] = None
+    ) -> models.AppBskyFeedDefs.ThreadViewPost:
+        """
+        Get a thread of posts from the BlueSky API.
+
+        Args:
+            uri (str): The URI of the post to get the thread for.
+            depth (int, optional): The maximum depth of the thread to retrieve.
+            parent_height (int, optional): The height of the parent post in the thread.
+        Returns:
+            thread (ThreadViewPost): The thread of posts.
+        Raises:
+            KeyError: If the post is not found.
+            ValueError: If the post is blocked.
+        """
+        params = {
+            "uri": uri,
+            "depth": depth,
+            "parent_height": parent_height,
+        }
+        response = self.client.app.bsky.feed.get_post_thread(params)
+        if isinstance(response.thread, models.AppBskyFeedDefs.NotFoundPost):
+            raise KeyError(f"Post not found: {uri}")
+        elif isinstance(response.thread, models.AppBskyFeedDefs.BlockedPost):
+            raise ValueError(f"Post blocked: {uri}")
+        return response.thread
+
 
 if __name__ == "__main__":
     import argparse
@@ -153,5 +180,6 @@ if __name__ == "__main__":
     posts, cursor = bluesky_client.query_posts(args.query, limit=args.limit)
 
     for post in posts:
-        print_post(post)
-        print("-" * 50)
+        thread = bluesky_client.get_post_thread(post.uri)
+        print_thread_view_post(thread)
+        print("-" * 80)
