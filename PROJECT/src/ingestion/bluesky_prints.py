@@ -263,10 +263,13 @@ def print_embed_video_main(
     print_blob_ref(embed.video, print_fn=print_fn, indent=indent + 4)
     _print(f"Alt: {embed.alt}")
     _print(f"Aspect Ratio: {embed.aspect_ratio}")
-    _print(f"Captions:")
-    for j, caption in enumerate(embed.captions):
-        _print(" " * (indent + 4) + f"Caption {j}:")
-        print_embed_video_caption(caption, print_fn=print_fn, indent=indent + 8)
+    if embed.captions:
+        _print(f"Captions:")
+        for j, caption in enumerate(embed.captions):
+            _print(" " * (indent + 4) + f"Caption {j}:")
+            print_embed_video_caption(caption, print_fn=print_fn, indent=indent + 8)
+    else:
+        _print(f"Captions: None")
     _print(f"Py Type: {embed.py_type}")
 
 
