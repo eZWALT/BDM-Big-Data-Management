@@ -11,7 +11,7 @@ def _create_print_function(print_fn: Callable[[str], None], indent: int):
     return _print
 
 
-def print_viewer_state(
+def print_actor_viewer_state(
     viewer: models.AppBskyActorDefs.ViewerState,
     print_fn: Optional[Callable[[str], None]] = print,
     indent: int = 0,
@@ -34,7 +34,32 @@ def print_viewer_state(
     _print(f"Py Type: {viewer.py_type}")
 
 
-def print_profile_basic(
+def print_actor_profile_view(
+    actor: models.AppBskyActorDefs.ProfileView,
+    print_fn: Optional[Callable[[str], None]] = print,
+    indent: int = 0,
+):
+    """
+    Print the details of an actor profile view.
+    Args:
+        actor (models.AppBskyActorDefs.ProfileView): The actor profile view to print.
+    """
+    _print = _create_print_function(print_fn, indent)
+    _print(f"Did: {actor.did}")
+    _print(f"Handle: {actor.handle}")
+    _print(f"Associated: {actor.associated}")
+    _print(f"Avatar: {actor.avatar}")
+    _print(f"Created At: {actor.created_at}")
+    _print(f"Description: {actor.description}")
+    _print(f"Display Name: {actor.display_name}")
+    _print(f"Indexed At: {actor.indexed_at}")
+    _print(f"Labels: {actor.labels}")
+    _print(f"Viewer:")
+    print_actor_viewer_state(actor.viewer, print_fn=print_fn, indent=indent + 4)
+    _print(f"Py Type: {actor.py_type}")
+
+
+def print_actor_profile_view_basic(
     profile: models.AppBskyActorDefs.ProfileViewBasic,
     print_fn: Optional[Callable[[str], None]] = print,
     indent: int = 0,
@@ -54,7 +79,7 @@ def print_profile_basic(
     _print(f"Display Name: {profile.display_name}")
     _print(f"Labels: {profile.labels}")
     _print(f"Viewer:")
-    print_viewer_state(profile.viewer, print_fn=print_fn, indent=indent + 4)
+    print_actor_viewer_state(profile.viewer, print_fn=print_fn, indent=indent + 4)
     _print(f"Py Type: {profile.py_type}")
 
 
@@ -327,7 +352,7 @@ def print_embed_record_view_record(
     """
     _print = _create_print_function(print_fn, indent)
     _print(f"Author:")
-    print_profile_basic(embed.author, print_fn=print_fn, indent=indent + 4)
+    print_actor_profile_view_basic(embed.author, print_fn=print_fn, indent=indent + 4)
     _print(f"Cid: {embed.cid}")
     _print(f"Indexed At: {embed.indexed_at}")
     _print(f"Uri: {embed.uri}")
@@ -606,7 +631,7 @@ def print_post(
     """
     _print = _create_print_function(print_fn, indent)
     _print(f"Author:")
-    print_profile_basic(post.author, print_fn=print_fn, indent=indent + 4)
+    print_actor_profile_view_basic(post.author, print_fn=print_fn, indent=indent + 4)
     _print(f"Cid: {post.cid}")
     _print(f"Embed:")
     if isinstance(post.embed, models.AppBskyEmbedExternal.View):
@@ -679,3 +704,22 @@ def print_thread_view_post(
         _print(f"Thread Context: None")
 
     _print(f"Py Type: {thread_view.py_type}")
+
+
+def print_like(
+    like: models.AppBskyFeedGetLikes.Like,
+    print_fn: Optional[Callable[[str], None]] = print,
+    indent: int = 0,
+):
+    """
+    Print the details of a like.
+
+    Args:
+        like (models.AppBskyFeedGetLikes.Like): The like to print.
+    """
+    _print = _create_print_function(print_fn, indent)
+    _print(f"Actor:")
+    print_actor_profile_view(like.actor, print_fn=print_fn, indent=indent + 4)
+    _print(f"Created At: {like.created_at}")
+    _print(f"Indexed At: {like.indexed_at}")
+    _print(f"Py Type: {like.py_type}")

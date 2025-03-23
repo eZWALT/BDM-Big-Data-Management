@@ -1,12 +1,12 @@
 import os
 import sys
-from typing import List, Literal, Optional, Union
+from typing import List, Literal, Optional, Tuple, Union
 
 from atproto import Client, models
 from loguru import logger
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from src.ingestion.bluesky_prints import print_thread_view_post
+from src.ingestion.bluesky_prints import print_like, print_thread_view_post
 from src.utils.config import ConfigManager
 
 
@@ -63,7 +63,7 @@ class BlueSkyAPIClient(object):
         tag: Optional[List[str]] = None,
         until: Optional[str] = None,
         url: Optional[str] = None,
-    ) -> tuple[List[models.AppBskyFeedDefs.PostView], Optional[str]]:
+    ) -> Tuple[List[models.AppBskyFeedDefs.PostView], Optional[str]]:
         """
         Query posts from the BlueSky API.
 
@@ -166,6 +166,36 @@ class BlueSkyAPIClient(object):
             raise ValueError(f"Post blocked: {uri}")
         return response.thread
 
+    def get_post_likes(
+        self, uri: str, cid: Optional[str] = None, limit: Optional[int] = None, cursor: Optional[str] = None
+    ) -> Tuple[List[models.AppBskyFeedGetLikes.Like], Optional[str]]:
+        """
+        Get the likes of a post from the BlueSky API.
+
+        Args:
+            uri (str): The URI of the post to get the likes for.
+            limit (int, optional): The maximum number of likes to retrieve.
+            cursor (str, optional): The cursor for pagination.
+        Returns:
+        """
+        params = {
+            "uri": uri,
+            "cid": cid,
+            "limit": limit,
+            "cursor": cursor,
+        }
+        response = self.client.app.bsky.feed.get_likes(params)
+
+        likes = response.likes
+        total_likes = len(likes)
+        while (limit is None or total_likes < limit) and response.cursor:
+            params["cursor"] = response.cursor
+            params["limit"] = limit - total_likes if limit else None
+            response = self.client.app.bsky.feed.get_likes(params)
+            likes.extend(response.likes)
+            total_likes += len(response.likes)
+        return likes, response.cursor
+
 
 if __name__ == "__main__":
     import argparse
@@ -181,5 +211,10 @@ if __name__ == "__main__":
 
     for post in posts:
         thread = bluesky_client.get_post_thread(post.uri)
+        likes, cursor = bluesky_client.get_post_likes(post.uri)
         print_thread_view_post(thread)
+        print("Likes:")
+        for j, like in enumerate(likes):
+            print(f"    Like {j}:")
+            print_like(like, indent=8)
         print("-" * 80)
