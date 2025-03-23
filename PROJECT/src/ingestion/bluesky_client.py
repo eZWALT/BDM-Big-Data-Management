@@ -6,6 +6,7 @@ from atproto import Client, client_utils, models
 from loguru import logger
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from src.ingestion.bluesky_prints import print_post
 from src.utils.client import APIClient
 from src.utils.config import ConfigManager
 
@@ -139,33 +140,17 @@ class BlueSkyAPIClient(object):
         return posts, response.cursor
 
 
-def print_post(post: models.AppBskyFeedDefs.PostView, print_fn: Optional[Callable] = print):
-    """
-    Print the details of a post.
-
-    Args:
-        post (models.AppBskyFeedDefs.PostView): The post to print.
-    """
-    print_fn(f"Author: {post.author}")
-    print_fn(f"Cid: {post.cid}")
-    print_fn(f"Embed: {post.embed}")
-    print_fn(f"Indexed At: {post.indexed_at}")
-    print_fn(f"Labels: {post.labels}")
-    print_fn(f"Like Count: {post.like_count}")
-    print_fn(f"Py Type: {post.py_type}")
-    print_fn(f"Quote Count: {post.quote_count}")
-    print_fn(f"Record: {post.record}")
-    print_fn(f"Reply Count: {post.reply_count}")
-    print_fn(f"Repost Count: {post.repost_count}")
-    print_fn(f"Threadgate: {post.threadgate}")
-    print_fn(f"URI: {post.uri}")
-    print_fn(f"Viewer: {post.viewer}")
-
-
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="BlueSky API Client")
+    parser.add_argument("query", type=str, help="Search query string")
+    parser.add_argument("--limit", type=int, default=10, help="Limit for the number of posts")
+    args = parser.parse_args()
+
     # Example usage
     bluesky_client = BlueSkyAPIClient()
-    posts, cursor = bluesky_client.query_posts("machine learning", limit=10)
+    posts, cursor = bluesky_client.query_posts(args.query, limit=args.limit)
 
     for post in posts:
         print_post(post)
