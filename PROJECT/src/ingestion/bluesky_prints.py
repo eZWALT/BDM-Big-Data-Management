@@ -199,8 +199,8 @@ def print_embed_images_main(
     _print = _create_print_function(print_fn, prefix)
     _print(f"Images:")
     for j, image in enumerate(embed.images):
-        _print(f" |- {j}:")
-        print_embed_image(image, print_fn=_print, prefix=" |      ")
+        _print(f" ├─ {j}:")
+        print_embed_image(image, print_fn=_print, prefix=" │      ")
     _print(f"Py Type: {embed.py_type}")
 
 
@@ -232,8 +232,8 @@ def print_embed_images_view(
     _print = _create_print_function(print_fn, prefix)
     _print(f"Images:")
     for j, image in enumerate(embed.images):
-        _print(f" |- {j}:")
-        print_embed_image_view_image(image, print_fn=_print, prefix=" |      ")
+        _print(f" ├─ {j}:")
+        print_embed_image_view_image(image, print_fn=_print, prefix=" │      ")
     _print(f"Py Type: {embed.py_type}")
 
 
@@ -268,8 +268,8 @@ def print_embed_video_main(
     if embed.captions:
         _print(f"Captions:")
         for j, caption in enumerate(embed.captions):
-            _print(f" |- {j}:")
-            print_embed_video_caption(caption, print_fn=_print, prefix=" |      ")
+            _print(f" ├─ {j}:")
+            print_embed_video_caption(caption, print_fn=_print, prefix=" │      ")
     else:
         _print(f"Captions: None")
     _print(f"Py Type: {embed.py_type}")
@@ -324,19 +324,19 @@ def print_embed_record_view_record(
     if embed.embeds:
         _print(f"Embeds:")
         for j, embed_item in enumerate(embed.embeds):
-            _print(f" |- {j}:")
+            _print(f" ├─ {j}:")
             if isinstance(embed_item, models.AppBskyEmbedImages.View):
-                print_embed_images_view(embed_item, print_fn=_print, prefix=" |      ")
+                print_embed_images_view(embed_item, print_fn=_print, prefix=" │      ")
             elif isinstance(embed_item, models.AppBskyEmbedVideo.View):
-                print_embed_video_view(embed_item, print_fn=_print, prefix=" |      ")
+                print_embed_video_view(embed_item, print_fn=_print, prefix=" │      ")
             elif isinstance(embed_item, models.AppBskyEmbedExternal.View):
-                print_embed_external_view(embed_item, print_fn=_print, prefix=" |      ")
+                print_embed_external_view(embed_item, print_fn=_print, prefix=" │      ")
             elif isinstance(embed_item, models.AppBskyEmbedRecord.View):
-                print_embed_record_view(embed_item, print_fn=_print, prefix=" |      ")
+                print_embed_record_view(embed_item, print_fn=_print, prefix=" │      ")
             elif isinstance(embed_item, models.AppBskyEmbedRecordWithMedia.View):
-                print_embed_record_with_media_view(embed_item, print_fn=_print, prefix=" |      ")
+                print_embed_record_with_media_view(embed_item, print_fn=_print, prefix=" │      ")
             else:
-                _print(f" |      Unknown embed type: {type(embed_item)}")
+                _print(f" │      Unknown embed type: {type(embed_item)}")
 
     else:
         _print(f"Embeds: None")
@@ -478,12 +478,12 @@ def print_rich_text_facet_main(
     _print = _create_print_function(print_fn, prefix)
     _print(f"Features:")
     for j, feature in enumerate(facet.features):
-        _print(f" |- {j}:")
+        _print(f" ├─ {j}:")
         if isinstance(feature, models.AppBskyRichtextFacet.Link):
-            print_rich_text_facet_link(feature, print_fn=_print, prefix=" |      ")
+            print_rich_text_facet_link(feature, print_fn=_print, prefix=" │      ")
         else:
-            _print(f" |      Unknown feature type: {type(feature)}")
-            _print(f" |      Py Type: {feature.py_type}")
+            _print(f" │      Unknown feature type: {type(feature)}")
+            _print(f" │      Py Type: {feature.py_type}")
     _print(f"Index:")
     print_byte_slice(facet.index, print_fn=_print, prefix="    ")
     _print(f"Py Type: {facet.py_type}")
@@ -536,8 +536,8 @@ def print_post_record(
     if record.facets:
         _print(f"Facets:")
         for j, facet in enumerate(record.facets):
-            _print(f" |- {j}:")
-            print_rich_text_facet_main(facet, print_fn=_print, prefix=" |      ")
+            _print(f" ├─ {j}:")
+            print_rich_text_facet_main(facet, print_fn=_print, prefix=" │      ")
     else:
         _print(f"Facets: None")
     _print(f"Labels: {record.labels}")
@@ -633,12 +633,12 @@ def print_thread_view_post(
         _print(f"Replies:")
         for j, reply in enumerate(thread_view.replies):
             if isinstance(reply, models.AppBskyFeedDefs.NotFoundPost):
-                _print(f" |- {j}: Not Found")
+                _print(f" ├─ {j}: Not Found")
             elif isinstance(reply, models.AppBskyFeedDefs.BlockedPost):
-                _print(f" |- {j}: Blocked")
+                _print(f" ├─ {j}: Blocked")
             else:
-                _print(f" |- {j}:")
-                print_thread_view_post(reply, print_fn=_print, prefix=" |      ")
+                _print(f" ├─ {j}:")
+                print_thread_view_post(reply, print_fn=_print, prefix=" │      ")
     else:
         _print(f"Replies: None")
 

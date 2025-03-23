@@ -215,6 +215,6 @@ if __name__ == "__main__":
         print_thread_view_post(thread)
         print("Likes:")
         for j, like in enumerate(likes):
-            print(f" |- {j}:")
-            print_like(like, prefix=" |      ")
+            print(f" ├─ {j}:")
+            print_like(like, prefix=" │      ")
         print("-" * 80)
