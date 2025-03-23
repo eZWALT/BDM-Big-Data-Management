@@ -583,7 +583,7 @@ def print_post_record(
         elif isinstance(record.embed, models.AppBskyEmbedRecordWithMedia.Main):
             print_embed_record_with_media_main(record.embed, print_fn=print_fn, indent=indent + 4)
     else:
-        print_fn("Embed: None")
+        _print("Embed: None")
     _print(f"Entities: {record.entities}")
     if record.facets:
         _print(f"Facets:")
