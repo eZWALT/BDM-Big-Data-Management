@@ -1,30 +1,30 @@
 services:
   #For now kafka and zookeeper aren't needed at all, so they are disabled
 
-  # # Zookeeper (Required for Kafka)
-  # # Fixed 3.9.3 version
-  # zookeeper:
-  #   image: bitnami/zookeeper:3.9.3
-  #   networks:
-  #     - bigdata_network
-  #   environment:
-  #     - ALLOW_ANONYMOUS_LOGIN=yes
-  #   ports:
-  #     - "2181:2181"
+  # Zookeeper (Required for Kafka)
+  # Fixed 3.9.3 version
+  zookeeper:
+    image: bitnami/zookeeper:3.9.3
+    networks:
+      - bigdata_network
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
 
-  # # Kafka (Streaming Platform)
-  # # Fixed 3.9.0 version
-  # kafka:
-  #   image: bitnami/kafka:3.9.0
-  #   networks:
-  #     - bigdata_network
-  #   depends_on:
-  #     - zookeeper
-  #   environment:
-  #     - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-  #     - ALLOW_PLAINTEXT_LISTENER=yes
-  #   ports:
-  #     - "9092:9092"
+  # Kafka (Streaming Platform)
+  # Fixed 3.9.0 version
+  kafka:
+    image: bitnami/kafka:3.9.0
+    networks:
+      - bigdata_network
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    ports:
+      - "9092:9092"
 
   # # PostgreSQL (Metadata Store + Airflow)
   # postgres:
@@ -98,80 +98,80 @@ services:
   #       timeout: 30s
   #       retries: 3
 
-  # Apache Spark (Master node)
-  # HDFS + Delta lake are contained inside this image
-  spark-master:
-    image: bitnami/spark:3.5.5
-    user: root
-    container_name: spark-master
-    networks:
-      - bigdata_network
-    environment:
-      - SPARK_MODE=master
-      # Avoid letting lil spark cook
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
-    ports:
-        - "7077:7077"
-        - "8181:8080"
-    volumes:
-      # Spark Script folder (same path as airflow)
-      - ./spark/app:/usr/local/spark/app
-      # Spark Resources folder (same path as airflow)
-      - ./spark/resource:/usr/local/spark/resources 
-    command: |
-      --packages io.delta:delta-core_2.12:1.1.0
+  # # Apache Spark (Master node)
+  # # HDFS + Delta lake are contained inside this image
+  # spark-master:
+  #   image: bitnami/spark:3.5.5
+  #   user: root
+  #   container_name: spark-master
+  #   networks:
+  #     - bigdata_network
+  #   environment:
+  #     - SPARK_MODE=master
+  #     # Avoid letting lil spark cook
+  #     - SPARK_RPC_AUTHENTICATION_ENABLED=no
+  #     - SPARK_RPC_ENCRYPTION_ENABLED=no
+  #     - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+  #     - SPARK_SSL_ENABLED=no
+  #   ports:
+  #       - "7077:7077"
+  #       - "8181:8080"
+  #   volumes:
+  #     # Spark Script folder (same path as airflow)
+  #     - ./spark/app:/usr/local/spark/app
+  #     # Spark Resources folder (same path as airflow)
+  #     - ./spark/resource:/usr/local/spark/resources 
+  #   command: |
+  #     --packages io.delta:delta-core_2.12:1.1.0
 
-  # Apache Spark Workers (x2)
-  spark-worker-1:
-    container_name: spark-worker-1
-    user: root 
-    networks:
-      - bigdata_network
-    image: bitnami/spark:3.5.5
-    environment: 
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_WORKER_MEMORY=500M
-      - SPARK_WORKER_CORES=1
-      # Avoid letting lil spark cook
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
-    depends_on:
-      - spark-master
-    volumes:
-      # Spark Script folder (same path as airflow)
-      - ./spark/app:/usr/local/spark/app
-      # Spark Resources folder (same path as airflow)
-      - ./spark/resource:/usr/local/spark/resources 
+  # # Apache Spark Workers (x2)
+  # spark-worker-1:
+  #   container_name: spark-worker-1
+  #   user: root 
+  #   networks:
+  #     - bigdata_network
+  #   image: bitnami/spark:3.5.5
+  #   environment: 
+  #     - SPARK_MODE=worker
+  #     - SPARK_MASTER_URL=spark://spark-master:7077
+  #     - SPARK_WORKER_MEMORY=500M
+  #     - SPARK_WORKER_CORES=1
+  #     # Avoid letting lil spark cook
+  #     - SPARK_RPC_AUTHENTICATION_ENABLED=no
+  #     - SPARK_RPC_ENCRYPTION_ENABLED=no
+  #     - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+  #     - SPARK_SSL_ENABLED=no
+  #   depends_on:
+  #     - spark-master
+  #   volumes:
+  #     # Spark Script folder (same path as airflow)
+  #     - ./spark/app:/usr/local/spark/app
+  #     # Spark Resources folder (same path as airflow)
+  #     - ./spark/resource:/usr/local/spark/resources 
 
-  spark-worker-2:
-    container_name: spark-worker-2
-    user: root 
-    networks:
-      - bigdata_network
-    image: bitnami/spark:3.5.5
-    environment: 
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_WORKER_MEMORY=500M
-      - SPARK_WORKER_CORES=1
-      # Avoid letting lil spark cook
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
-    depends_on:
-      - spark-master
-    volumes:
-      # Spark Script folder (same path as airflow)
-      - ./spark/app:/usr/local/spark/app
-      # Spark Resources folder (same path as airflow)
-      - ./spark/resource:/usr/local/spark/resources 
+  # spark-worker-2:
+  #   container_name: spark-worker-2
+  #   user: root 
+  #   networks:
+  #     - bigdata_network
+  #   image: bitnami/spark:3.5.5
+  #   environment: 
+  #     - SPARK_MODE=worker
+  #     - SPARK_MASTER_URL=spark://spark-master:7077
+  #     - SPARK_WORKER_MEMORY=500M
+  #     - SPARK_WORKER_CORES=1
+  #     # Avoid letting lil spark cook
+  #     - SPARK_RPC_AUTHENTICATION_ENABLED=no
+  #     - SPARK_RPC_ENCRYPTION_ENABLED=no
+  #     - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+  #     - SPARK_SSL_ENABLED=no
+  #   depends_on:
+  #     - spark-master
+  #   volumes:
+  #     # Spark Script folder (same path as airflow)
+  #     - ./spark/app:/usr/local/spark/app
+  #     # Spark Resources folder (same path as airflow)
+  #     - ./spark/resource:/usr/local/spark/resources 
   # # Run a notebook separate container that connects to spark
   # jupyter-spark:
   #   image: jupyter/pyspark-notebook:spark-3.5.5
@@ -184,6 +184,14 @@ services:
   #     - ./notebooks:/home/notebooks 
   #     - ./spark/resources/data
   #     - ./spark/resources/jars
+  # streamlit-frontend:
+  #   image: python/python
+  #   networks: 
+  #     - bigdata_network
+  #   command:
+  #     - streamlit run src/frontend/home.py
+  #   ports:
+  #     - 9999:9999
 
 networks:
   bigdata_network:

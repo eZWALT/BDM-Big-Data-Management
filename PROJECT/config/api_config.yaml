@@ -25,11 +25,11 @@ apis:
       api_key_env: "YOUTUBE_API_KEY"
 
   bluesky:
-    base_url: "https://bsky.social/xrpc/"
+    base_url: 'https://bsky.social/xrpc'
     endpoints:
       posts: "com.atproto.repo.listRecords"
       profile: "com.atproto.identity.resolveHandle"
     auth:
-      type: "username_password"
-      username_env: "BLUESKY_USERNAME"
+      type: "email_password"
+      email_env: "BLUESKY_EMAIL"
       password_env: "BLUESKY_PASSWORD"

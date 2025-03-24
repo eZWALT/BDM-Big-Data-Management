@@ -1,5 +1,6 @@
-import yaml
 import os
+
+import yaml
 
 # ===----------------------------------------------------------------------===#
 # ConfigManager                                                              #
@@ -43,9 +44,7 @@ class ConfigManager:
             api_key = os.getenv(api_key_env)
 
             if not api_key:
-                raise ValueError(
-                    f"Missing API key for {api_name}. Set the environment variable '{api_key_env}'."
-                )
+                raise ValueError(f"Missing API key for {api_name}. Set the environment variable '{api_key_env}'.")
 
             return {"api_key": api_key}
 
@@ -56,15 +55,22 @@ class ConfigManager:
             password = os.getenv(password_env)
 
             if not username or not password:
-                raise ValueError(
-                    f"Missing credentials for {api_name}. Set '{username_env}' and '{password_env}'."
-                )
+                raise ValueError(f"Missing credentials for {api_name}. Set '{username_env}' and '{password_env}'.")
 
             return {"username": username, "password": password}
 
-        raise ValueError(
-            f"Unknown authentication type '{auth_type}' for API '{api_name}'."
-        )
+        elif auth_type == "email_password":
+            email_env = auth_config.get("email_env", "")
+            password_env = auth_config.get("password_env", "")
+            email = os.getenv(email_env)
+            password = os.getenv(password_env)
+
+            if not email or not password:
+                raise ValueError(f"Missing credentials for {api_name}. Set '{email_env}' and '{password_env}'.")
+
+            return {"email": email, "password": password}
+
+        raise ValueError(f"Unknown authentication type '{auth_type}' for API '{api_name}'.")
 
     def get_config(self, *keys, default=None):
         data = self.config
