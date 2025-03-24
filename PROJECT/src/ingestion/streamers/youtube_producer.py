@@ -2,9 +2,11 @@ from kafka import KafkaProducer
 import json
 import time
 from loguru import logger
-from src.ingestion.connectors.youtube_client import YoutubeAPIClient
 from typing import List, Dict
 import os
+
+from src.ingestion.streamers.kafka_setup import KafkaManagement
+from src.ingestion.connectors.youtube_client import YoutubeAPIClient
 
 # ===----------------------------------------------------------------------===#
 # Youtube Streaming Producer                                                  #
@@ -60,8 +62,8 @@ Kafka partitioning
 
 
 class YoutubeProducer:
-    def __init__(self, kafka_broker: str = "localhost:9092"):
-        self.kafka_broker = kafka_broker
+    def __init__(self, kafka_broker: str):
+        self.kafka_broker = KafkaManagement().get_server()
         self.producer = KafkaProducer(
             bootstrap_servers=self.kafka_broker,
             value_serializer=(lambda v: json.dumps(v).encode("utf-8")),

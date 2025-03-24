@@ -19,7 +19,7 @@ from abc import ABC, abstractmethod
 class APIClient(ABC):
     def __init__(self):
         # Define the base attributes
-        self.config_manager = ConfigManager(config_path="config/api_config.yaml")
+        self.config_manager = ConfigManager(config_path="config/api.yaml")
         self.api_name = "abstract"
 
     # Each API has its own way of authentification

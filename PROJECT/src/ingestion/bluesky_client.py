@@ -17,7 +17,7 @@ from src.utils.config import ConfigManager
 # ===-----------------------------------------------------------------------===#
 class BlueSkyAPIClient(object):
     def __init__(self, email: str = None, password: str = None, base_url: str = None):
-        self.config_manager = ConfigManager(config_path="config/api_config.yaml")
+        self.config_manager = ConfigManager(config_path="config/api.yaml")
         if not email or not password:
             credentials = self.config_manager.get_api_credentials("bluesky")
             self.email = email or credentials.get("email")
