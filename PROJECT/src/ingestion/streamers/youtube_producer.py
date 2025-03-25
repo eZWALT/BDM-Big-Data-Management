@@ -82,11 +82,11 @@ class YoutubeProducer(Producer):
         """
         Fetch comments from YouTube videos and send them to Kafka
         """
-        comments = self.client.extract_comments_from_videos(
+        results = self.client.extract_comments_from_videos(
             videos=videos, max_comments=max_comments, save=False
         )
-        for comment in comments:
-            self.send_message("youtube_comment", comment)
+        for video_id, comments in results.items():
+            self.send_message("youtube_comment", comments)
         logger.success(f"[YT PRODUCER] Sent comments to Zookeeper")
 
     def produce_captions(self, videos: list):
@@ -127,7 +127,7 @@ class YoutubeProducer(Producer):
         if prod_captions:
             self.produce_captions(videos)
 
-    def run(self, query: str, max_results: int = 5, max_comments: int = 10, prod_comments: bool = False, prod_captions: bool = False):
+    def poll(self, query: str, max_results: int = 5, max_comments: int = 10, prod_comments: bool = False, prod_captions: bool = False):
         """
         Continuously fetch data and produce it to Kafka in real-time.
         """
@@ -141,8 +141,6 @@ class YoutubeProducer(Producer):
                 self.produce_captions(videos)
 
             # Sleep for a while before polling again
-            # TODO: fix this missing attribute from abstract class
-            logger.error(self.polling_timeout)
             time.sleep(self.polling_timeout/1000) 
     
     def close(self):
@@ -151,12 +149,11 @@ class YoutubeProducer(Producer):
 
 
 if __name__ == "__main__":
-    local_test = False
-
+    local_test = ConfigManager("config/streaming.yaml")._load_config()["kafka"]["local_test"]
     if not local_test:
         producer = YoutubeProducer()
         producer.run(
-            query="Chill Guy",
+            query="aw hell naw",
             max_results=5,
             max_comments=10,
             prod_comments=True,

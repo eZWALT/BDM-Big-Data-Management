@@ -26,9 +26,9 @@ class TaskStatus(Enum):
 
 
 class Task(ABC):
-    def __init__(self, config: dict):
-        self.config = config
-
+    def __init__(self):
+        super().__init__()
+        
     @abstractmethod
     def setup(self):
         pass
@@ -37,10 +37,5 @@ class Task(ABC):
     def execute(self):
         pass
 
-    @abstractmethod
     def status(self):
-        pass
-
-    @abstractmethod
-    def cleanup(self):
-        pass
+        return self._status

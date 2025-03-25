@@ -28,7 +28,6 @@ class TestConsumer(Consumer):
     
 class YoutubeConsumer(Consumer):
     def __init__(self):
-        self.id = "YT"
         super().__init__(id="YT")
 
     def process_message(self, message: dict):
@@ -39,16 +38,16 @@ class YoutubeConsumer(Consumer):
 
 
 if __name__ == "__main__":
-    local_test = True
+    local_test = ConfigManager("config/streaming.yaml")._load_config()["kafka"]["local_test"]
     if local_test:
         consumer = TestConsumer()
         consumer.subscribe(["test_topic"])
-        #consumer.consume()
-        consumer.poll(verbose=True)
+        consumer.consume()
+        #consumer.poll(verbose=True)
     else:
         # To do a real example lets create a consumer and also perform
         # subscription to a set of topics and active polling to get them
         consumer = YoutubeConsumer()
         consumer.subscribe(["youtube_caption", "youtube_metadata", "youtube_comment"])
-        consumer.consume()
-        #consumer.poll()
+        #consumer.consume()
+        consumer.poll()

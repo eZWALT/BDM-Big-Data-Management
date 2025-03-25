@@ -12,7 +12,10 @@ from src.utils.config import ConfigManager
 # This class represents a "Consumer" for the Youtube API following the Kafka  #
 # Producer-Consumer and publication/subscription patterns. Fetches data from  #
 # the broker kafka server managed by zookeeper from the producers             #
-# NOTE: all times are represented using miliseconds rather than seconds       #                              
+# NOTE: all times are represented using miliseconds rather than seconds       # 
+#                                                                             #
+# Stream Consumer --> reads from newly produced data (Streaming)              #              
+# Read Consumer ----> reads from all produced data                            #              
 #                                                                             #
 # Author: Walter J.T.V                                                        #
 # ===----------------------------------------------------------------------===#
@@ -28,6 +31,7 @@ class Producer(ABC):
             value_serializer=(lambda v: json.dumps(v).encode("utf-8")),
         )
         self.id = id
+        self.polling_timeout = polling_timeout
 
     def send_message(self, topic: str, message: dict):
         self.producer.send(topic, value=message)
@@ -50,19 +54,27 @@ class Producer(ABC):
 
 class Consumer(ABC):
     # Actively listen every 10 seconds
-    def __init__(self, id: str, polling_timeout: int = 10000):
+    def __init__(self, id: str, polling_timeout: int = 1000):
         self.id = id
         self.cfg = ConfigManager(config_path="config/streaming.yaml")
         self.polling_timeout = polling_timeout
-        self.consumer = KafkaConsumer(
+        # We will 
+        self.read_consumer = KafkaConsumer(
             bootstrap_servers=self.cfg._load_config()["kafka"]["bootstrap_servers"],
             value_deserializer=lambda v: json.loads(v.decode("utf-8")),
-            auto_offset_reset="earliest",  # Start from the beginning
+            auto_offset_reset="earliest",  # Start from the beggining
+            enable_auto_commit=False,
+        )
+        self.stream_consumer = KafkaConsumer(
+            bootstrap_servers=self.cfg._load_config()["kafka"]["bootstrap_servers"],
+            value_deserializer=lambda v: json.loads(v.decode("utf-8")),
+            auto_offset_reset="latest",  # Start from the end (ideal for streaming)
             enable_auto_commit=False,
         )
 
     def subscribe(self, topics: List[str]):
-        self.consumer.subscribe(topics)
+        self.read_consumer.subscribe(topics)
+        self.stream_consumer.subscribe(topics)
         logger.info(f"[{self.id}-CONSUMER] Subscribed to topics {topics}")
     
     
@@ -71,19 +83,18 @@ class Consumer(ABC):
     def consume(self):
         logger.info(f"[{self.id}-CONSUMER] Consuming all available messages for all topics")
         try:
-            for topic_partition in self.consumer.assignment():
+            for topic_partition in self.read_consumer.assignment():
                 # Seek to the beginning (0) for each partition
-                self.consumer.seek_to_beginning(topic_partition)
+                self.read_consumer.seek_to_beginning(topic_partition)
             
-            messages = self.consumer.poll(timeout_ms=self.polling_timeout)
+            messages = self.read_consumer.poll(timeout_ms=self.polling_timeout)
             if messages:
                 for topic_partition, records in messages.items():
                     for record in records:
                         self.process_message(record)
         except Exception as e:
             logger.error(f"[{self.id}-CONSUMER] Error while consuming messages: {e}")
-        finally:
-            self.close()
+
 
     
     # Get all messages by actively listening (polling) on the brokers
@@ -93,7 +104,7 @@ class Consumer(ABC):
         try:
             while True:
 
-                messages = self.consumer.poll(timeout_ms=self.polling_timeout)
+                messages = self.stream_consumer.poll(timeout_ms=self.polling_timeout)
 
                 if messages:
                     for topic_partition, records in messages.items():
@@ -119,5 +130,6 @@ class Consumer(ABC):
         pass
 
     def close(self):
-        self.consumer.close()
+        self.read_consumer.close()
+        self.stream_consumer.close()
         logger.info(f"[{self.id}-CONSUMER] Consumer closed.")

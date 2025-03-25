@@ -33,7 +33,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_LOG_RETENTION_HOURS: 1
       KAFKA_MESSAGE_MAX_BYTES: 1000000        # Max 100 MB
-      log.retention.ms: 60000             # Retain messages for only 1 minutes
+      log.retention.ms: 3600000             # Retain messages for only 1h 
 
     
 
