@@ -1,7 +1,13 @@
 kafka:
   bootstrap_servers: "localhost:9092" # This should probably be extracted from the docker compose somehow
   topics:
-    - name: "youtube_topic"
+    - name: "youtube_metadata"
+      num_partitions: 1
+      replication_factor: 1
+    - name: "youtube_caption"
+      num_partitions: 1
+      replication_factor: 1
+    - name: "youtube_comment"
       num_partitions: 1
       replication_factor: 1
     - name: "twitter_topic"

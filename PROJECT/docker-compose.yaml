@@ -1,38 +1,40 @@
 services:
   # # Zookeeper (Required for Kafka)
   # # Fixed 3.9.3 version
-  # zookeeper:
-  #   image: bitnami/zookeeper:3.9.3
-  #   container_name: viberadar_zookeeper
-  #   networks:
-  #     - bigdata_network
-  #   environment:
-  #     - ALLOW_ANONYMOUS_LOGIN=yes
-  #   ports:
-  #     - "2181:2181"
-  #   restart: unless-stopped
+  zookeeper:
+    image: bitnami/zookeeper:3.9.3
+    container_name: viberadar_zookeeper
+    networks:
+      - bigdata_network
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+    restart: unless-stopped
 
-  # # Kafka (Streaming Platform)
-  # # Fixed 3.9.0 version
-  # kafka:
-  #   image: bitnami/kafka:3.9.0
-  #   container_name: viberadar_kafka
-  #   networks:
-  #     - bigdata_network
-  #   depends_on:
-  #     - zookeeper
-  #   ports:
-  #     - "9092:9092"
-  #   restart: unless-stopped
-  #   environment:
-  #     KAFKA_BROKER_ID: 1
-  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-  #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-  #     KAFKA_LOG_RETENTION_HOURS: 1
-  #     KAFKA_MESSAGE_MAX_BYTES: 1000000 #Max 100 MB
+  # Kafka (Streaming Platform)
+  # Fixed 3.9.0 version
+  kafka:
+    image: bitnami/kafka:3.9.0
+    container_name: viberadar_kafka
+    networks:
+      - bigdata_network
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    restart: unless-stopped
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 1
+      KAFKA_MESSAGE_MAX_BYTES: 1000000        # Max 100 MB
+      log.retention.ms: 60000             # Retain messages for only 1 minutes
+
     
 
   # # PostgreSQL (Metadata Store + Airflow)
@@ -208,8 +210,8 @@ services:
   #     working_dir: /app 
   #     restart: unless-stopped
 
-  # networks:
-  #   bigdata_network:
-  #     driver: bridge
+networks:
+  bigdata_network:
+    driver: bridge
 
 # TODO: Define which volumes are needed

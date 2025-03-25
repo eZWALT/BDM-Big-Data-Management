@@ -7,6 +7,7 @@ import os
 
 from src.ingestion.connectors.youtube_client import YoutubeAPIClient
 from src.utils.config import ConfigManager
+from src.utils.streamer import Producer
 
 # ===----------------------------------------------------------------------===#
 # Youtube Streaming Producer                                                  #
@@ -61,33 +62,37 @@ Kafka partitioning
 """
 
 
-class YoutubeProducer:
-    def __init__(self, kafka_broker: str):
-        self.kafka_broker = KafkaManagement().get_server()
-        self.producer = KafkaProducer(
-            bootstrap_servers=self.kafka_broker,
-            value_serializer=(lambda v: json.dumps(v).encode("utf-8")),
-        )
+class YoutubeProducer(Producer):
+    def __init__(self):
+        self.id = "YT"
+        super().__init__(id=self.id)
         self.client = YoutubeAPIClient()
 
-    # Also return the metadata for other functions to use
     def produce_video_metadata(self, query: str, max_results: int = 5) -> list:
+        """
+        Fetch video metadata from YouTube API and send it to Kafka
+        """
         videos = self.client.extract_videos(query, max_results, save=False)
         for video in videos:
-            # Kafka Send messages <Topic, Message>
-            self.producer.send("youtube_metadata", video)
+            self.send_message("youtube_metadata", video)
         logger.success(f"[YT PRODUCER] Sent metadata to Zookeeper")
         return videos
 
     def produce_comments(self, videos: list, max_comments: int = 5):
+        """
+        Fetch comments from YouTube videos and send them to Kafka
+        """
         comments = self.client.extract_comments_from_videos(
             videos=videos, max_comments=max_comments, save=False
         )
         for comment in comments:
-            self.producer.send("youtube_comment", comment)
+            self.send_message("youtube_comment", comment)
         logger.success(f"[YT PRODUCER] Sent comments to Zookeeper")
 
-    def produce_captions(self, videos: list, max_comments: int = 5):
+    def produce_captions(self, videos: list):
+        """
+        Fetch captions from YouTube videos and send them to Kafka
+        """
         output_folder = "data_lake/temporal/captions"
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
@@ -96,9 +101,9 @@ class YoutubeProducer:
             videos=videos, output_folder=output_folder
         )
 
-        for video_id, caption_file in captions.items():
+        for video_id, caption_path in captions.items():
             # Read the captions file
-            with open(caption_file, "r", encoding="utf-8") as file:
+            with open(caption_path, "r", encoding="utf-8") as file:
                 captions_text = file.read()
 
             message = {
@@ -106,47 +111,65 @@ class YoutubeProducer:
                 "captions": captions_text,
                 "timestamp": time.time(),
             }
-            self.producer.send("youtube_captions", message)
+            self.send_message("youtube_caption", message)
 
             # Remove temporary file (Cleanup)
-            os.remove(caption_file)
+            os.remove(caption_path)
         logger.success(f"[YT PRODUCER] Sent captions to Zookeeper")
 
-    # Video metadata is always sent, but comments and captions are optional
-    def run_producer(
-        self,
-        query: str,
-        max_results: int = 5,
-        max_comments: int = 10,
-        prod_comments: bool = False,
-        prod_captions: bool = False,
-    ):
+    def produce(self, query: str, max_results: int = 5, max_comments: int = 10, prod_comments: bool = False, prod_captions: bool = False):
+        """
+        Override the abstract produce method to handle producing tasks.
+        """
         videos = self.produce_video_metadata(query, max_results)
         if prod_comments:
             self.produce_comments(videos, max_comments)
         if prod_captions:
-            self.produce_captions(videos, max_comments)
+            self.produce_captions(videos)
+
+    def run(self, query: str, max_results: int = 5, max_comments: int = 10, prod_comments: bool = False, prod_captions: bool = False):
+        """
+        Continuously fetch data and produce it to Kafka in real-time.
+        """
+        logger.info(f"[{self.id}-PRODUCER] Starting Youtube producer...")
+
+        while True:
+            videos = self.produce_video_metadata(query, max_results)            
+            if prod_comments:
+                self.produce_comments(videos, max_comments)
+            if prod_captions:
+                self.produce_captions(videos)
+
+            # Sleep for a while before polling again
+            # TODO: fix this missing attribute from abstract class
+            logger.error(self.polling_timeout)
+            time.sleep(self.polling_timeout/1000) 
+    
+    def close(self):
+        super().close()
+        logger.info(f"[{self.id}-PRODUCER] Youtube Producer closed.")
 
 
 if __name__ == "__main__":
-    # Example of local and API test
-    local_test = True
-    cfg = ConfigManager(config_path="config/streaming.yaml")
+    local_test = False
+
     if not local_test:
         producer = YoutubeProducer()
-        producer.run_producer(
-            query="Chill Guy Jordans",
+        producer.run(
+            query="Chill Guy",
             max_results=5,
             max_comments=10,
             prod_comments=True,
             prod_captions=True,
         )
     else:
+        # Local Kafka producer example
+        cfg = ConfigManager(config_path="config/streaming.yaml")
         producer = KafkaProducer(
             bootstrap_servers=cfg._load_config()["kafka"]["bootstrap_servers"],
             value_serializer=(lambda v: json.dumps(v).encode("utf-8")),
         )
-        for i in range(5):
+        for i in range(10):
             message = {"number": i, "message": f"[PRODUCER] sent: {i}"}
             logger.success("Flipa tulipa")
             producer.send("test_topic", value=message)

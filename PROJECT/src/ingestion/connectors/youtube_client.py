@@ -56,7 +56,7 @@ class YoutubeAPIClient(APIClient):
         self,
         endpoint: str,
         api_params: dict,
-        max_retries: int = 3,
+        max_retries: int = 2,
         backoff: int = 2,
         strict_raise: bool = False,
     ) -> dict:
@@ -151,7 +151,7 @@ class YoutubeAPIClient(APIClient):
         }
 
         try:
-            data = self.fetch("commentThreads", api_params)
+            data = self.fetch("commentThreads", api_params, strict_raise=True)
             # TODO: SAVE THIS COMMENT SCHEMA
             comments = [
                 {
@@ -249,11 +249,11 @@ class YoutubeAPIClient(APIClient):
             )
 
             if en_caption:
-                self.retry_pytubefix_operation(
+                caption_path = self.retry_pytubefix_operation(
                     en_caption.download, title=video_id, output_path=output_folder
                 )
                 logger.success(f"Successfully downloaded captions for video {video_id}")
-                return f"{output_folder}/{video_id}.srt"
+                return caption_path
             else:
                 logger.warning(f"No English captions available for video {video_id}")
         except Exception as e:
@@ -349,7 +349,7 @@ class YoutubeAPIClient(APIClient):
         except requests.RequestException as e:
             logger.error(f"[Download] Error downloading image: {e}")
 
-    def extract_captions_from_videos(self, videos: List[dict], output_folder: str):
+    def extract_captions_from_videos(self, videos: List[dict], output_folder: str) -> dict:
         """Extracts English captions from YouTube videos if available."""
         output_path = Path(output_folder)
         output_path.mkdir(parents=True, exist_ok=True)
@@ -357,13 +357,15 @@ class YoutubeAPIClient(APIClient):
         captions = {}
         for video in videos:
             video_id = video["videoId"]
-            captions[video_id] = self.retrieve_caption(video_id, output_path)
-            if captions[video_id]:
+            caption_path = self.retrieve_caption(video_id, output_path)
+            if caption_path:
+                captions[video_id] = caption_path
                 logger.success(f"[Captions] Saved captions for {video_id}")
             else:
                 logger.warning(f"[Captions] No captions found for {video_id}")
 
-        return captions
+        return captions  # Only includes videos with successfully extracted captions
+
 
     def extract_audio_from_videos(self, videos: List[dict], output_folder="audios"):
         """Extracts audio from YouTube videos."""
