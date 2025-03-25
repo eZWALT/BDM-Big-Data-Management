@@ -95,6 +95,15 @@ To contribute to our test-driven development, we continiously produce unit tests
 PYTHONPATH=. pytest tests/
 ```
 
+## TODO
+
+- [x] add Kafka Streaming infrastructure
+- [ ] test kafka
+- [x] add streamlit to docker and test it
+- [ ] test locally airflow
+- [ ] add Docker compose airflow
+- [ ] test spark docker compose
+- [ ] do async api ingestion
 
 
 ## Credits

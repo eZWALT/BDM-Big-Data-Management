@@ -1,34 +1,44 @@
 services:
-  #For now kafka and zookeeper aren't needed at all, so they are disabled
+  # # Zookeeper (Required for Kafka)
+  # # Fixed 3.9.3 version
+  # zookeeper:
+  #   image: bitnami/zookeeper:3.9.3
+  #   container_name: viberadar_zookeeper
+  #   networks:
+  #     - bigdata_network
+  #   environment:
+  #     - ALLOW_ANONYMOUS_LOGIN=yes
+  #   ports:
+  #     - "2181:2181"
+  #   restart: unless-stopped
 
-  # Zookeeper (Required for Kafka)
-  # Fixed 3.9.3 version
-  zookeeper:
-    image: bitnami/zookeeper:3.9.3
-    networks:
-      - bigdata_network
-    environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
-    ports:
-      - "2181:2181"
-
-  # Kafka (Streaming Platform)
-  # Fixed 3.9.0 version
-  kafka:
-    image: bitnami/kafka:3.9.0
-    networks:
-      - bigdata_network
-    depends_on:
-      - zookeeper
-    environment:
-      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-      - ALLOW_PLAINTEXT_LISTENER=yes
-    ports:
-      - "9092:9092"
+  # # Kafka (Streaming Platform)
+  # # Fixed 3.9.0 version
+  # kafka:
+  #   image: bitnami/kafka:3.9.0
+  #   container_name: viberadar_kafka
+  #   networks:
+  #     - bigdata_network
+  #   depends_on:
+  #     - zookeeper
+  #   ports:
+  #     - "9092:9092"
+  #   restart: unless-stopped
+  #   environment:
+  #     KAFKA_BROKER_ID: 1
+  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+  #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #     KAFKA_LOG_RETENTION_HOURS: 1
+  #     KAFKA_MESSAGE_MAX_BYTES: 1000000 #Max 100 MB
+    
 
   # # PostgreSQL (Metadata Store + Airflow)
   # postgres:
   #   image: postgres:17-alpine
+  #   container_name: viberadar_postgres
   #   networks:
   #     - bigdata_network
   #   # TODO: Define volumes for postgres
@@ -49,6 +59,7 @@ services:
   # # 3. Worker (Only if we needed to use CeleryExecutor for distributed)
   # airflow-scheduler:
   #   image: apache/airflow:2.10.0
+  #   container_name: viberadar_airflow_scheduler
   #   restart: always
   #   networks:
   #     - bigdata_network
@@ -76,6 +87,7 @@ services:
 
   # airflow-webserver:
   #   image: apache/airflow:2.10.0
+  #   container_name: viberadar_airflow_webserver
   #   restart: always
   #   networks:
   #       - bigdata_network
@@ -184,17 +196,20 @@ services:
   #     - ./notebooks:/home/notebooks 
   #     - ./spark/resources/data
   #     - ./spark/resources/jars
-  # streamlit-frontend:
-  #   image: python/python
-  #   networks: 
-  #     - bigdata_network
-  #   command:
-  #     - streamlit run src/frontend/home.py
-  #   ports:
-  #     - 9999:9999
+  #   streamlit-frontend:
+  #     build:
+  #       context: .
+  #       dockerfile: Dockerfile
+  #     container_name: streamlit-frontend
+  #     networks: 
+  #       - bigdata_network
+  #     ports:
+  #       - 9999:9999
+  #     working_dir: /app 
+  #     restart: unless-stopped
 
-networks:
-  bigdata_network:
-    driver: bridge
+  # networks:
+  #   bigdata_network:
+  #     driver: bridge
 
 # TODO: Define which volumes are needed

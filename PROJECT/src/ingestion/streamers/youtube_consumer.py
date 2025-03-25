@@ -1,5 +1,8 @@
 from kafka import KafkaConsumer
 import json
+import time
+from src.utils.config import ConfigManager
+from src.utils.streamer import Consumer
 
 # ===----------------------------------------------------------------------===#
 # Youtube Streaming Consumer                                                  #
@@ -22,15 +25,40 @@ class YoutubeConsumer:
 
 if __name__ == "__main__":
     local_test = True
+    cfg = ConfigManager(config_path="config/streaming.yaml")
     if local_test:
         consumer = KafkaConsumer(
-            topic="test_topic",
-            bootstrap_server="localhost:9092",
+            ["test_topic"],
+            bootstrap_servers=cfg._load_config()["kafka"]["bootstrap_servers"],
             value_deserializer=(lambda v: json.loads(v.decode("utf-8"))),
-            group_id="test_group",
             auto_offset_reset="earliest",  # Offset 0 (earliest)
+            enable_auto_commit=False,
         )
+        # Show captured messages
         for message in consumer:
             print(f"[CONSUMER] recieved: {message.value}")
+
     else:
-        pass
+        # To do a real example lets create a consumer and also perform
+        # subscription to a set of topics and active polling to get them
+        consumer = KafkaConsumer(
+            bootstrap_servers=cfg._load_config()["kafka"]["bootstrap_servers"],
+            value_deserializer=(lambda v: json.loads(v.decode("utf-8"))),
+            auto_offset_reset="earliest",  # Offset 0 (earliest)
+            enable_auto_commit=False,
+        )
+        # Subscribe to a specific topic
+        consumer.subscribe(topics=["my-topic"])
+
+        # Actively Poll for new messages
+        while True:
+            msg = consumer.poll(timeout_ms=1000)
+            if msg:
+                for topic, partition, offset, key, value in msg.items():
+                    print(
+                        "Topic: {} | Partition: {} | Offset: {} | Key: {} | Value: {}".format(
+                            topic, partition, offset, key, value.decode("utf-8")
+                        )
+                    )
+            else:
+                print("No new messages")

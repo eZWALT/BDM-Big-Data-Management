@@ -5,8 +5,8 @@ from loguru import logger
 from typing import List, Dict
 import os
 
-from src.ingestion.streamers.kafka_setup import KafkaManagement
 from src.ingestion.connectors.youtube_client import YoutubeAPIClient
+from src.utils.config import ConfigManager
 
 # ===----------------------------------------------------------------------===#
 # Youtube Streaming Producer                                                  #
@@ -131,6 +131,7 @@ class YoutubeProducer:
 if __name__ == "__main__":
     # Example of local and API test
     local_test = True
+    cfg = ConfigManager(config_path="config/streaming.yaml")
     if not local_test:
         producer = YoutubeProducer()
         producer.run_producer(
@@ -142,7 +143,7 @@ if __name__ == "__main__":
         )
     else:
         producer = KafkaProducer(
-            bootstrap_servers="localhost:9092",
+            bootstrap_servers=cfg._load_config()["kafka"]["bootstrap_servers"],
             value_serializer=(lambda v: json.dumps(v).encode("utf-8")),
         )
         for i in range(5):
