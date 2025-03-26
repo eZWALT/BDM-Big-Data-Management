@@ -28,6 +28,7 @@ class TaskStatus(Enum):
 class Task(ABC):
     def __init__(self):
         super().__init__()
+        self.task_status = TaskStatus.PENDING
         
     @abstractmethod
     def setup(self):

@@ -4,6 +4,9 @@ import json
 from loguru import logger
 from abc import abstractmethod, ABC
 from typing import List
+from enum import Enum
+import multiprocessing
+
 from src.utils.config import ConfigManager
 
 # ===----------------------------------------------------------------------===#
@@ -21,6 +24,13 @@ from src.utils.config import ConfigManager
 # ===----------------------------------------------------------------------===#
 
 
+
+# Enumeration for API data pulling strategy
+class IngestionStrategy(Enum):
+    RELEVANCE = "relevance"
+    NEWEST = "newest"
+
+
 # This producer is identified by ID
 class Producer(ABC):
     # To stream-produce in real time 60s per request is more than enough
@@ -36,14 +46,16 @@ class Producer(ABC):
     def send_message(self, topic: str, message: dict):
         self.producer.send(topic, value=message)
 
-    # Produce messages. This must be implemented in the subclasses
+    # Produce messages. This must be implemented in the subclasses and recieves a query
+    # and an ingestion strategy as an input. More parameters can be added
     @abstractmethod
-    def produce(self, *args, **kwargs):
+    def produce(self, query: str, strategy: IngestionStrategy = IngestionStrategy.RELEVANCE, *args, **kwargs):
         pass
 
-    # Generic driver run method, this should be refactored with tasks
+    # Generic driver polling method that continiously generates data using "produce" method 
+    # by a simple active polling loop
     @abstractmethod
-    def run(self, *args, **kwargs):
+    def poll(self, query: str,  strategy: IngestionStrategy = IngestionStrategy.NEWEST, *args, **kwargs):
         pass
 
     def close(self):
@@ -105,12 +117,11 @@ class Consumer(ABC):
             while True:
 
                 messages = self.stream_consumer.poll(timeout_ms=self.polling_timeout)
-
                 if messages:
                     for topic_partition, records in messages.items():
                         for record in records:
                             if verbose:
-                                logger.debug(f"Record fetched: {record}")
+                                logger.debug(f"Record fetched: {record}, by process: {multiprocessing.current_process().pid}")
                             self.process_message(record)
         except Exception as e:
             logger.error(f"[{self.id}-CONSUMER] Error while polling messages: {e}")
@@ -123,12 +134,6 @@ class Consumer(ABC):
     def process_message(self, message):
         pass
         
-    # Generic driver run method, this should be refactored with tasks
-    # here real-time streaming (polling) logic can be implemented
-    @abstractmethod
-    def run(self, *args, **kwargs):
-        pass
-
     def close(self):
         self.read_consumer.close()
         self.stream_consumer.close()

@@ -7,7 +7,7 @@ import os
 
 from src.ingestion.connectors.youtube_client import YoutubeAPIClient
 from src.utils.config import ConfigManager
-from src.utils.streamer import Producer
+from src.utils.streamer import Producer, IngestionStrategy
 
 # ===----------------------------------------------------------------------===#
 # Youtube Streaming Producer                                                  #
@@ -68,22 +68,22 @@ class YoutubeProducer(Producer):
         super().__init__(id=self.id)
         self.client = YoutubeAPIClient()
 
-    def produce_video_metadata(self, query: str, max_results: int = 5) -> list:
+    def produce_video_metadata(self, query: str, max_results: int = 5, order = "relevance") -> list:
         """
         Fetch video metadata from YouTube API and send it to Kafka
         """
-        videos = self.client.extract_videos(query, max_results, save=False)
+        videos = self.client.extract_videos(query, max_results, save=False, order=order)
         for video in videos:
             self.send_message("youtube_metadata", video)
         logger.success(f"[YT PRODUCER] Sent metadata to Zookeeper")
         return videos
 
-    def produce_comments(self, videos: list, max_comments: int = 5):
+    def produce_comments(self, videos: list, max_comments: int = 5, order = "relevance"):
         """
         Fetch comments from YouTube videos and send them to Kafka
         """
         results = self.client.extract_comments_from_videos(
-            videos=videos, max_comments=max_comments, save=False
+            videos=videos, max_comments=max_comments, save=False, order=order
         )
         for video_id, comments in results.items():
             self.send_message("youtube_comment", comments)
@@ -117,29 +117,25 @@ class YoutubeProducer(Producer):
             os.remove(caption_path)
         logger.success(f"[YT PRODUCER] Sent captions to Zookeeper")
 
-    def produce(self, query: str, max_results: int = 5, max_comments: int = 10, prod_comments: bool = False, prod_captions: bool = False):
+    def produce(self, query: str, strategy: IngestionStrategy = IngestionStrategy.RELEVANCE, max_results: int = 5, max_comments: int = 10, prod_comments: bool = True, prod_captions: bool = True):
         """
         Override the abstract produce method to handle producing tasks.
         """
-        videos = self.produce_video_metadata(query, max_results)
+        videos = self.produce_video_metadata(query, max_results, order=("relevance" if strategy == IngestionStrategy.RELEVANCE else "date"))
         if prod_comments:
-            self.produce_comments(videos, max_comments)
+            self.produce_comments(videos, max_comments, order=("relevance" if strategy == IngestionStrategy.RELEVANCE else "time"))
         if prod_captions:
             self.produce_captions(videos)
+            
 
-    def poll(self, query: str, max_results: int = 5, max_comments: int = 10, prod_comments: bool = False, prod_captions: bool = False):
+    def poll(self, query: str, strategy:  IngestionStrategy = IngestionStrategy.NEWEST, max_results: int = 5, max_comments: int = 10, prod_comments: bool = True, prod_captions: bool = True):
         """
         Continuously fetch data and produce it to Kafka in real-time.
         """
         logger.info(f"[{self.id}-PRODUCER] Starting Youtube producer...")
 
         while True:
-            videos = self.produce_video_metadata(query, max_results)            
-            if prod_comments:
-                self.produce_comments(videos, max_comments)
-            if prod_captions:
-                self.produce_captions(videos)
-
+            self.produce(query, strategy, max_results, max_comments, prod_comments, prod_captions)
             # Sleep for a while before polling again
             time.sleep(self.polling_timeout/1000) 
     
@@ -152,8 +148,9 @@ if __name__ == "__main__":
     local_test = ConfigManager("config/streaming.yaml")._load_config()["kafka"]["local_test"]
     if not local_test:
         producer = YoutubeProducer()
-        producer.run(
-            query="aw hell naw",
+        producer.poll(
+            query="goofy jordans",
+            strategy=IngestionStrategy.NEWEST,
             max_results=5,
             max_comments=10,
             prod_comments=True,
@@ -168,7 +165,7 @@ if __name__ == "__main__":
         )
         for i in range(10):
             message = {"number": i, "message": f"[PRODUCER] sent: {i}"}
-            logger.success("Flipa tulipa")
+            logger.success("BDM is DW2")
             producer.send("test_topic", value=message)
             time.sleep(2)
         producer.flush()
