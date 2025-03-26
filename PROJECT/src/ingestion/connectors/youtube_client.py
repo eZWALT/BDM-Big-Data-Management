@@ -291,7 +291,7 @@ class YoutubeAPIClient(APIClient):
         query: str,
         max_results: int = 10,
         output_folder: str = "videos_metadata",
-        save: bool = True,
+        save: bool = False,
         order: str = "relevance"
     ):
         """Retrieve videos metadata, merge statistics, and save each video as a separate JSON file."""
@@ -318,7 +318,7 @@ class YoutubeAPIClient(APIClient):
         videos: list,
         max_comments: int = 10,
         output_folder: str = "comments",
-        save: bool = True,
+        save: bool = False,
         order: str = "relevance"
     ):
         """Extracts comments from a given list of video metadata and saves them as JSON."""

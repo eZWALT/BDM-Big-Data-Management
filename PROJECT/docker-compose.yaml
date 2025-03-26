@@ -1,39 +1,40 @@
 services:
+  # TODO: refactor using hostnames instead of ips
   # # Zookeeper (Required for Kafka)
   # # Fixed 3.9.3 version
-  zookeeper:
-    image: bitnami/zookeeper:3.9.3
-    container_name: viberadar_zookeeper
-    networks:
-      - bigdata_network
-    environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
-    ports:
-      - "2181:2181"
-    restart: unless-stopped
+  # zookeeper:
+  #   image: bitnami/zookeeper:3.9.3
+  #   container_name: viberadar_zookeeper
+  #   networks:
+  #     - bigdata_network
+  #   environment:
+  #     - ALLOW_ANONYMOUS_LOGIN=yes
+  #   ports:
+  #     - "2181:2181"
+  #   restart: unless-stopped
 
-  # Kafka (Streaming Platform)
-  # Fixed 3.9.0 version
-  kafka:
-    image: bitnami/kafka:3.9.0
-    container_name: viberadar_kafka
-    networks:
-      - bigdata_network
-    depends_on:
-      - zookeeper
-    ports:
-      - "9092:9092"
-    restart: unless-stopped
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_LOG_RETENTION_HOURS: 1
-      KAFKA_MESSAGE_MAX_BYTES: 1000000        # Max 100 MB
-      log.retention.ms: 3600000             # Retain messages for only 1h 
+  # # Kafka (Streaming Platform)
+  # # Fixed 3.9.0 version
+  # kafka:
+  #   image: bitnami/kafka:3.9.0
+  #   container_name: viberadar_kafka
+  #   networks:
+  #     - bigdata_network
+  #   depends_on:
+  #     - zookeeper
+  #   ports:
+  #     - "9092:9092"
+  #   restart: unless-stopped
+  #   environment:
+  #     KAFKA_BROKER_ID: 1
+  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+  #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #     KAFKA_LOG_RETENTION_HOURS: 1
+  #     KAFKA_MESSAGE_MAX_BYTES: 1000000        # Max 100 MB
+  #     log.retention.ms: 3600000             # Retain messages for only 1h 
 
     
 
@@ -72,7 +73,7 @@ services:
   #     - EXECUTOR=Local 
   #     - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://admin:airflow@postgres:5432/metadata_db
   #   ports:
-  #     - "8080:8080"
+  #     - "8090:8080"
   #   volumes:
   #     # DAG Folder 
   #     - ./airflow/dags:/user/local/airflow/dags
@@ -112,92 +113,74 @@ services:
   #       timeout: 30s
   #       retries: 3
 
-  # # Apache Spark (Master node)
-  # # HDFS + Delta lake are contained inside this image
-  # spark-master:
-  #   image: bitnami/spark:3.5.5
-  #   user: root
-  #   container_name: spark-master
-  #   networks:
-  #     - bigdata_network
-  #   environment:
-  #     - SPARK_MODE=master
-  #     # Avoid letting lil spark cook
-  #     - SPARK_RPC_AUTHENTICATION_ENABLED=no
-  #     - SPARK_RPC_ENCRYPTION_ENABLED=no
-  #     - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-  #     - SPARK_SSL_ENABLED=no
-  #   ports:
-  #       - "7077:7077"
-  #       - "8181:8080"
-  #   volumes:
-  #     # Spark Script folder (same path as airflow)
-  #     - ./spark/app:/usr/local/spark/app
-  #     # Spark Resources folder (same path as airflow)
-  #     - ./spark/resource:/usr/local/spark/resources 
-  #   command: |
-  #     --packages io.delta:delta-core_2.12:1.1.0
-
-  # # Apache Spark Workers (x2)
-  # spark-worker-1:
-  #   container_name: spark-worker-1
-  #   user: root 
-  #   networks:
-  #     - bigdata_network
-  #   image: bitnami/spark:3.5.5
-  #   environment: 
-  #     - SPARK_MODE=worker
-  #     - SPARK_MASTER_URL=spark://spark-master:7077
-  #     - SPARK_WORKER_MEMORY=500M
-  #     - SPARK_WORKER_CORES=1
-  #     # Avoid letting lil spark cook
-  #     - SPARK_RPC_AUTHENTICATION_ENABLED=no
-  #     - SPARK_RPC_ENCRYPTION_ENABLED=no
-  #     - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-  #     - SPARK_SSL_ENABLED=no
-  #   depends_on:
-  #     - spark-master
-  #   volumes:
-  #     # Spark Script folder (same path as airflow)
-  #     - ./spark/app:/usr/local/spark/app
-  #     # Spark Resources folder (same path as airflow)
-  #     - ./spark/resource:/usr/local/spark/resources 
-
-  # spark-worker-2:
-  #   container_name: spark-worker-2
-  #   user: root 
-  #   networks:
-  #     - bigdata_network
-  #   image: bitnami/spark:3.5.5
-  #   environment: 
-  #     - SPARK_MODE=worker
-  #     - SPARK_MASTER_URL=spark://spark-master:7077
-  #     - SPARK_WORKER_MEMORY=500M
-  #     - SPARK_WORKER_CORES=1
-  #     # Avoid letting lil spark cook
-  #     - SPARK_RPC_AUTHENTICATION_ENABLED=no
-  #     - SPARK_RPC_ENCRYPTION_ENABLED=no
-  #     - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-  #     - SPARK_SSL_ENABLED=no
-  #   depends_on:
-  #     - spark-master
-  #   volumes:
-  #     # Spark Script folder (same path as airflow)
-  #     - ./spark/app:/usr/local/spark/app
-  #     # Spark Resources folder (same path as airflow)
-  #     - ./spark/resource:/usr/local/spark/resources 
-  # # Run a notebook separate container that connects to spark
-  # jupyter-spark:
-  #   image: jupyter/pyspark-notebook:spark-3.5.5
-  #   networks:
-  #     - bigdata_network
-  #   ports:
-  #     - "8888:8888"
-  #     - "4040-4080:4040-4080"
-  #   volumes:
-  #     - ./notebooks:/home/notebooks 
-  #     - ./spark/resources/data
-  #     - ./spark/resources/jars
+  # Apache Spark (Master node)
+  # HDFS + Delta lake are contained inside this image
+  spark-master:
+    image: bitnami/spark:3.5.1
+    user: root
+    container_name: spark-master
+    hostname: spark
+    networks:
+      - bigdata_network
+    environment:
+        SPARK_MODE: master
+      # Avoid letting lil spark cook
+        SPARK_RPC_AUTHENTICATION_ENABLED: no
+        SPARK_RPC_ENCRYPTION_ENABLED: no
+        SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: no
+        SPARK_SSL_ENABLED: no
+        SPARK_USER: spark
+        SPARK_UI_PORT: 8089
+    ports:
+        - "7077:7077" # MASTER PORTS
+        - "8089:8080" # SPARK DASHBOARD UI
+    volumes:
+      # Spark Script folder (same path as airflow)
+      - ./spark/app:/usr/local/spark/app
+      # Spark Resources folder (same path as airflow)
+      - ./spark/resource:/usr/local/spark/resources 
+      # Tests paths
+      - ./spark/tests:/usr/local/spark/tests
+  spark-worker-1:
+    image: bitnami/spark:3.5.1
+    user: root 
+    hostname: spark-worker-1
+    container_name: spark-worker-1
+    networks:
+      - bigdata_network
+    environment:
+        SPARK_MODE: worker
+        SPARK_MASTER_URL: spark://spark:7077
+        SPARK_WORKER_MEMORY: 1G
+        SPARK_WORKER_CORES: 1
+        SPARK_RPC_AUTHENTICATION_ENABLED: no
+        SPARK_RPC_ENCRYPTION_ENABLED: no
+        SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: no
+        SPARK_SSL_ENABLED: no
+        SPARK_USER: spark
+    ports:
+        - "8081:8081" # SPARK DASHBOARD UI
+        
+  spark-worker-2:
+    image: bitnami/spark:3.5.1
+    user: root 
+    hostname: spark-worker-2
+    container_name: spark-worker-2
+    networks:
+      - bigdata_network
+    environment:
+        SPARK_MODE: worker
+        SPARK_MASTER_URL: spark://spark:7077
+        SPARK_WORKER_MEMORY: 1G
+        SPARK_WORKER_CORES: 1
+        SPARK_RPC_AUTHENTICATION_ENABLED: no
+        SPARK_RPC_ENCRYPTION_ENABLED: no
+        SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: no
+        SPARK_SSL_ENABLED: no
+        SPARK_USER: spark
+    ports:
+        - "8082:8082" # SPARK DASHBOARD UI
+        
   #   streamlit-frontend:
   #     build:
   #       context: .

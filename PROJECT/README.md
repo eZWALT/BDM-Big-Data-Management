@@ -38,6 +38,14 @@ WIP
 
 ## Usage
 
+In order to fully utilize this project, there is several software and access to private apis you will need, as described in the following sections. To guarantee the ease of execution/portability of this project you will need:
+
+- Docker Compose                   (Mandatory) 
+- Java (To execute spark locally)  (Optional) --> aditionally create a HOST_IP environment variable with your IPv4
+- Python 3.11 (To execute locally) (Optional)
+
+Note: To execute pyspark on the driver node (your pc/laptop) you will need to install java and set the java_home environment variable and have python 3.11
+
 ### Dockerized execution
 
 You can run this project either by setting up the environment locally or using Docker. For simplicity docker compose setup is showcased:
@@ -53,6 +61,7 @@ The basic structure of this docker compose server is the following, bearing in m
 4. ZooKeeper
 5. Spark Master: 1 master
 6. Spark Workers: up to N workers
+7. Streamlit frontend
 
 Also one can find environment variables defined inside `environment` tag,  `command` and `entrypoint`defines the entrypoint command or actions to perform, `volume` indicates which storage volume is using (storage volumes reside inside the host device)
 
@@ -67,14 +76,12 @@ docker-compose port <service_name> <container_port>
 docker-compose events
 ```
 
-### Front-end 
-
 In order to make use of front-end to visualize and inspect the data management pipeline, filesystem and dashboards run the docker image or locally run streamlit
 
 ```sh
 
 streamlit run src/frontend/home.py
-xdg-open http://localhost:8501  # Open the browser in Ubuntu
+xdg-open http://0.0.0.0:9999  # Open the browser in Ubuntu
 ```
 
 ### Social Media API's
@@ -84,8 +91,6 @@ xdg-open http://localhost:8501  # Open the browser in Ubuntu
 1. Twitter/X 
 2. Bluesky
 3. Youtube 
-4. TikTok (Future extension)
-5. Mastodon (Future extension)
 
 ## Testing suite
 
