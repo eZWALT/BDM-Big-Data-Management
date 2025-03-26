@@ -20,4 +20,3 @@ networks:
   bigdata_network:
     driver: bridge
 
-# TODO: Define which volumes are needed
