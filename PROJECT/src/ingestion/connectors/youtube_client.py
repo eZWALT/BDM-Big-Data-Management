@@ -54,12 +54,31 @@ class YoutubeAPIClient(APIClient):
     def extract(self):
         return super().extract()
 
+    def parallel_fetch(self, endpoint: str, api_params_list: list, max_retries: int = 2, backoff: int = 2, strict_raise: bool = False):
+        """Fetch data for multiple requests concurrently using ThreadPoolExecutor."""
+        futures = []
+        results = []
+
+        for api_params in api_params_list:
+            future = self.executor.submit(self.fetch, endpoint, api_params, max_retries, backoff, strict_raise)
+            futures.append(future)
+
+        for future in as_completed(futures):
+            try:
+                result = future.result()
+                if result is not None:
+                    results.append(result)
+            except Exception as e:
+                logger.error(f"[Fetch] Error in fetching: {e}")
+        
+        return results
+    
     def fetch(
         self,
         endpoint: str,
         api_params: dict,
         max_retries: int = 2,
-        backoff: int = 2,
+        backoff: int = 1,
         strict_raise: bool = False,
     ) -> dict:
         """General method to fetch data from YouTube API with retry logic."""
@@ -326,32 +345,21 @@ class YoutubeAPIClient(APIClient):
         return results
 
     def extract_video_thumbnails(self, videos: list, output_folder="thumbnails"):
-        """Extracts high-quality thumbnails and saves them as image files."""
+        """Extracts high-quality thumbnails concurrently."""
         output_path = Path(output_folder)
         output_path.mkdir(parents=True, exist_ok=True)
 
         results = []  
+        with ThreadPoolExecutor() as executor:
+            futures = []
+            for video in videos:
+                video_id = video["videoId"]
+                thumbnail_url = video["thumbnails"]
+                if thumbnail_url:
+                    futures.append(executor.submit(self.download_image, thumbnail_url, output_path / f"{video_id}.jpg"))
 
-        for video in videos:
-            video_id = video["videoId"]
-            thumbnail_url = video["thumbnails"]
-            if not video_id or not thumbnail_url:
-                logger.warning(f"[Thumbnails] No valid thumbnail available for {video_id}")
-                continue
-
-            if thumbnail_url:
-                file_path = output_path / f"{video_id}.jpg"
-                self.download_image(thumbnail_url, file_path)
-                logger.success(
-                    f"[Thumbnails] Saved thumbnail for {video_id}: {file_path}"
-                )
-                results.append({
-                    "video_id": video_id, 
-                    "thumbnail_path": file_path,
-                    "thumbnail_url": thumbnail_url
-                })
-            else:
-                logger.warning(f"[Thumbnails] No thumbnail available for {video_id}")
+            for future in as_completed(futures):
+                future.result()  # Wait for all download tasks to complete
 
         return videos
 
@@ -388,36 +396,50 @@ class YoutubeAPIClient(APIClient):
 
 
     def extract_audio_from_videos(self, videos: List[dict], output_folder="audios"):
-        """Extracts audio from YouTube videos."""
+        """Extracts audio from YouTube videos concurrently."""
         output_path = Path(output_folder)
         output_path.mkdir(parents=True, exist_ok=True)
         results = [] 
 
-        for video in videos:
-            video_id = video["videoId"]
-            audio_path = self.retrieve_audio(video_id, output_path)
-            if audio_path:
-                results.append({
-                    "video_id": video_id,
-                    "audio_path": audio_path,
-                })
-                logger.success(f"[Audio] Saved audio for {video_id}")
+        with ThreadPoolExecutor() as executor:
+            futures = []
+            for video in videos:
+                video_id = video["videoId"]
+                futures.append(executor.submit(self.retrieve_audio, video_id, output_path))
+
+            for future in as_completed(futures):
+                result = future.result()  # Wait for the result
+                if result:
+                    results.append({
+                        "video_id": video_id,
+                        "audio_path": result,
+                    })
+                    logger.success(f"[Audio] Saved audio for {video_id}")
+
+        return results
 
     def extract_video_from_videos(self, videos: List[dict], output_folder="videos"):
-        """Extracts video with a specific format and resolution from YouTube."""
+        """Extracts video with a specific format and resolution from YouTube concurrently."""
         output_path = Path(output_folder)
         output_path.mkdir(parents=True, exist_ok=True)
         results = [] 
 
-        for video in videos:
-            video_id = video["videoId"]
-            video_path = self.retrieve_video(video_id, output_path)
-            if video_path:
-                results.append({
-                    "video_id": video_id,
-                    "video_path": video_path,
-                })
-                logger.success(f"[Video] Saved video for {video_id}")
+        with ThreadPoolExecutor() as executor:
+            futures = []
+            for video in videos:
+                video_id = video["videoId"]
+                futures.append(executor.submit(self.retrieve_video, video_id, output_path))
+
+            for future in as_completed(futures):
+                result = future.result()  # Wait for the result
+                if result:
+                    results.append({
+                        "video_id": video_id,
+                        "video_path": result,
+                    })
+                    logger.success(f"[Video] Saved video for {video_id}")
+
+        return results
 
 # There are 2 order methods: "relevance" and "time"/"date"
 # basic usage of this Youtube API class :)
