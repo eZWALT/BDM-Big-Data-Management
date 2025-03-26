@@ -3,6 +3,7 @@ from src.utils.client import APIClient
 import requests
 import os
 import json
+import pandas as pd
 import time
 
 # ===-----------------------------------------------------------------------===#
@@ -129,6 +130,10 @@ def main():
           print("Tweet ID:", tweet['id'], "Replies:", replies)
     else:
         print("No data found or incorrect data structure.")
+
+    # Convert JSON data to a DataFrame if 'data' key is present
+    tweets_df = pd.DataFrame(tweets)
+
 
 if __name__ == "__main__":
     main()
