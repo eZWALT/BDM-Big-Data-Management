@@ -2,7 +2,8 @@ from enum import Enum
 from typing import List, Dict
 import json
 from datetime import datetime, timedelta
-
+import pprint
+import re
 # ===----------------------------------------------------------------------===#
 # Company Related Information                                                 #
 #                                                                             #
@@ -31,20 +32,36 @@ class Product:
         usecase_airflow_args: Dict[str, str] = None,
     ):
         # The lowercase name uniquely identifies a product
-        self.name = product_name.lower()
+        self.name = self.convert_to_underscore_nomenclature(product_name)
         # each product has a set of associated keywords
         self.keywords = [keyword.lower() for keyword in product_keywords]
         # each product has a certain degree of tracking (tier)
         self.tracking_tier = tracking_tier
         self.usecase_airflow_args = usecase_airflow_args
 
+    def convert_to_underscore_nomenclature(self, text: str) -> str:
+        # Replace spaces with underscores and convert to lowercase
+        return re.sub(r'\s+', '_', text.strip()).lower()
+    
     # Used for serialization purposes
     def to_dict(self):
+        # Convert timedelta objects to string format
+        if self.usecase_airflow_args:
+            airflow_args_serialized = {
+                k: (
+                    f"timedelta({unit}={int(v.total_seconds() // (60 if unit == 'minutes' else 3600))})"
+                    if isinstance(v, timedelta) else v
+                )
+                for k, v in self.usecase_airflow_args.items()
+            }
+        else:
+            airflow_args_serialized = None
+
         return {
             "product_name": self.name,
             "product_keywords": self.keywords,
             "tracking_tier": self.tracking_tier.value,
-            "usecase_airflow_args": self.usecase_airflow_args,
+            "usecase_airflow_args": airflow_args_serialized,
         }
 
 
@@ -160,27 +177,31 @@ def deserialize_companies_from_json(json_path: str) -> List[Company]:
                         "%Y-%m-%d"
                     )  # Set today's date
 
-                # Replace string 'timedelta' with actual timedelta
+                # Simplified: Handle retry_delay for 'minutes' and 'hours' only
                 if "retry_delay" in airflow_args:
                     retry_delay_str = airflow_args["retry_delay"]
-                    if "timedelta" in retry_delay_str:
-                        # Parse the timedelta from string format
-                        retry_delay_minutes = int(
-                            retry_delay_str.split("=")[-1].strip(")")
-                        )
-                        airflow_args["retry_delay"] = timedelta(
-                            minutes=retry_delay_minutes
-                        )
+                    if isinstance(retry_delay_str, str) and "timedelta" in retry_delay_str:
+                        # Parse the timedelta from string format using regex
+                        match = re.match(r"timedelta\((\w+)=(\d+)\)", retry_delay_str)
+                        if match:
+                            time_unit = match.group(1)
+                            time_value = int(match.group(2))
+                            if time_unit == "minutes":
+                                airflow_args["retry_delay"] = timedelta(minutes=time_value)
+                            elif time_unit == "hours":
+                                airflow_args["retry_delay"] = timedelta(hours=time_value)
+                            else:
+                                raise ValueError(f"Unsupported time unit: {time_unit}")
+                        else:
+                            raise ValueError(f"Invalid timedelta format: {retry_delay_str}")
 
                 # Add product to the company
                 company.add_product(
                     prod_name=product["product_name"],
                     prod_keywords=product["product_keywords"],
                     track_tier=tracking_tier,
+                    usecase_airflow_args=airflow_args
                 )
-
-                # Attach airflow arguments to the product's usecase
-                product["usecase_airflow_args"] = airflow_args
 
             companies.append(company)
 
@@ -204,6 +225,8 @@ def serialize_companies_to_json(companies: List[Company], json_path: str):
 
 if __name__ == "__main__":
     # Parse companies from the input JSON
-    companies = deserialize_companies_from_json("airflow/dags/companies.json")
+    companies = deserialize_companies_from_json("src/orchestration/companies.json")
+    for company in companies: 
+        pprint.pprint(company.to_dict(), indent=2)
     # Dump companies back into a new JSON file
-    serialize_companies_to_json(companies, "airflow/dags/companies.json")
+    serialize_companies_to_json(companies, "src/orchestration/juanmiguel.json")

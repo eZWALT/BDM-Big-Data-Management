@@ -14,7 +14,7 @@ x-airflow-common:
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
@@ -28,15 +28,17 @@ x-airflow-common:
     # If you want to use it, outcomment it and replace airflow.cfg with the name of your config file
     # AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
   volumes:
-    - ${AIRFLOW_PROJ_DIR:-./data/airflow}/dags:/opt/airflow/dags
-    - ${AIRFLOW_PROJ_DIR:-./data/airflow}/logs:/opt/airflow/logs
-    - ${AIRFLOW_PROJ_DIR:-./data/airflow}/config:/opt/airflow/config
-    - ${AIRFLOW_PROJ_DIR:-./data/airflow}/plugins:/opt/airflow/plugins
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/logs:/opt/airflow/logs
+    - ./airflow/config:/opt/airflow/config
+    - ./airflow/plugins:/opt/airflow/plugins
+    - ./airflow/tests:/opt/airflow/tests
+    - ./src:/opt/airflow/dags/src         
+    # All the needed code to execute a dag must be inside dags folder
+    # therefore this is a braindead work-around
   user: "${AIRFLOW_UID:-5000}:0"
   depends_on:
     &airflow-common-depends-on
-    airflow-redis:
-      condition: service_healthy
     airflow-postgres:
       condition: service_healthy
 
@@ -61,7 +63,7 @@ services:
     # Redis is limited to 7.2-bookworm due to licencing change
     # https://redis.io/blog/redis-adopts-dual-source-available-licensing/
     image: redis:7.2-bookworm
-    container_name: airflow-redis
+    container_name: redis    # DO NOT CHANGE THIS CONTAINER NAME (REDIS URL HAS TO BE CHANGED TOO OR IT JUST DIES)
     expose:
       - 6379
     healthcheck:
@@ -188,12 +190,12 @@ services:
       _PIP_ADDITIONAL_REQUIREMENTS: ''
     user: "0:0"
     volumes:
-      - ${AIRFLOW_PROJ_DIR:-./data/airflow}:/sources
+      - ./airflow:/sources
 
 volumes:
   airflow-postgres-db-volume:
     driver: local
     driver_opts:
       type: none
-      device: ${AIRFLOW_PROJ_DIR:-./data/airflow}/postgres
+      device: ./airflow/postgres
       o: bind

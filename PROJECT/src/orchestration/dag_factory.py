@@ -1,11 +1,14 @@
 from typing import List
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.operators.dummy_operator import DummyOperator
-from datetime import datetime, timedelta, date
+from airflow.operators.empty import EmptyOperator
+from airflow.decorators import dag, task
+from datetime import datetime, timedelta, date, timezone
 import psycopg2
 
-from src.utils.company import Company, Product
+from airflow.models import DagModel
+
+from src.utils.company import Company
 
 # ===----------------------------------------------------------------------===#
 # Factory DAG                                                                 #
@@ -24,8 +27,14 @@ def initialize_dag_from_company(company: Company, prod_idx: int) -> DAG:
 
     # Fetch airflow arguments for the DAG (Provide default values for the most relevant)
     schedule_interval = airflow_args.get("schedule_interval", "@daily")
-    start_date = airflow_args.get("start_date", date.today())
-    catchup = airflow_args.get("catchup", False)
+    start_date_str = airflow_args.get("start_date", None)
+    if start_date_str:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d",).replace(tzinfo=timezone.utc)  
+    else:
+        start_date = datetime.now(timezone.utc)  
+    catchup_str = airflow_args.get("catchup", False)
+    catchup = catchup_str.lower() == "true"
+    
     dynamic_args = {
         key: value
         for key, value in airflow_args.items()
@@ -35,11 +44,11 @@ def initialize_dag_from_company(company: Company, prod_idx: int) -> DAG:
     # Create the DAG
     dag = DAG(
         dag_id=company.generate_usecase_dag_id(prod_idx),
-        description=f"Tracking Vibe for {product.product_name} of {company.company_id}",
+        description=f"Tracking Vibe for {product.name} of {company.company_id}",
         schedule_interval=schedule_interval,
         start_date=start_date,
         catchup=catchup,
-        **dynamic_args,
+        #**dynamic_args, # TODO: use dynamic_args (Airflow docs are trash)
     )
     return dag
 
@@ -51,7 +60,6 @@ def create_batch_product_tracking_dag(
     prod_idx: int,
 ) -> DAG:
 
-    product = company.get_product(prod_idx)
     dag = initialize_dag_from_company(company, prod_idx)
 
     with dag:
@@ -76,24 +84,6 @@ def create_batch_product_tracking_dag(
 
     return dag
 
-
-# TODO: End this dag
-# Factory method to create a parameterized processing DAG for a product.
-def create_stream_product_tracking_dag(
-    company: Company,
-    prod_idx: int,
-) -> DAG:
-
-    product = company.get_product(prod_idx)
-    dag = initialize_dag_from_company(company, prod_idx)
-
-    with dag:
-        # Common abstract tasks for stream based workflows
-        pass
-
-    return dag
-
-
 # TODO: End this dag
 # Factory method to create a parameterized processing DAG for a product.
 def create_dummy_test_dag(
@@ -106,10 +96,10 @@ def create_dummy_test_dag(
 
     with dag:
 
-        dumb_task1 = DummyOperator(task_id=f"ingestion_{company.company_id}", dag=dag)
-        dumb_task2 = DummyOperator(task_id=f"landingzone_{company.company_id}", dag=dag)
-        dumb_task3 = DummyOperator(task_id=f"trustedzone_{company.company_id}", dag=dag)
-        dumb_task4 = DummyOperator(
+        dumb_task1 = EmptyOperator(task_id=f"ingestion_{company.company_id}", dag=dag)
+        dumb_task2 = EmptyOperator(task_id=f"landingzone_{company.company_id}", dag=dag)
+        dumb_task3 = EmptyOperator(task_id=f"trustedzone_{company.company_id}", dag=dag)
+        dumb_task4 = EmptyOperator(
             task_id=f"exploitationzone_{company.company_id}", dag=dag
         )
     dumb_task1 >> dumb_task2 >> dumb_task3 >> dumb_task4

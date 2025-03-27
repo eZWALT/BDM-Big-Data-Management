@@ -103,13 +103,13 @@ PYTHONPATH=. pytest tests/
 ## TODO
 
 - [x] add Kafka Streaming infrastructure
-- [ ] test kafka
+- [x] test kafka
 - [x] add streamlit to docker and test it
 - [ ] test locally airflow
-- [ ] add Docker compose airflow
-- [ ] test spark docker compose
-- [ ] do async api ingestion
-
+- [x] add Docker compose airflow
+- [x] test spark docker compose
+- [x] do async api ingestion
+- [ ] Improve Streamlit presentation
 
 ## Credits
 
