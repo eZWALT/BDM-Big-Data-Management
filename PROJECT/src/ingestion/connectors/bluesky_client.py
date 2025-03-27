@@ -1,12 +1,8 @@
 import os
-import sys
 from typing import List, Literal, Optional, Tuple, Union
 
 from atproto import Client, models
-from loguru import logger
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from src.ingestion.bluesky_prints import print_like, print_thread_view_post
 from src.utils.config import ConfigManager
 
 
@@ -199,6 +195,8 @@ class BlueSkyAPIClient(object):
 
 if __name__ == "__main__":
     import argparse
+
+    from _bluesky_prints import print_like, print_thread_view_post
 
     parser = argparse.ArgumentParser(description="BlueSky API Client")
     parser.add_argument("query", type=str, help="Search query string")
