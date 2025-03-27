@@ -33,10 +33,6 @@ with DAG(
         task_id='say_goodbye',
         python_callable=say_goodbye,
     )
-    dag_id = "dag_name"
-    dag = DagModel.get_dagmodel(dag_id)
-    dag.set_is_paused(is_paused=False)
-
     hello_task >> goodbye_task  # Hello must happen before Goodbye!
 
 

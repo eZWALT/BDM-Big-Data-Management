@@ -3,7 +3,7 @@
 import streamlit as st
 
 def streaming_page():
-    st.set_page_config(page_title="Streaming - VibeRadar", layout="centered")
+    st.set_page_config(page_title="Streaming - VibeRadar", layout="wide")
     st.title("📡 Real-Time Streaming Data")
     st.header("Stay Ahead with Real-Time Insights")
 

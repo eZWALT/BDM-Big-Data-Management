@@ -3,7 +3,7 @@
 import streamlit as st
 
 def trusted_page():
-    st.set_page_config(page_title="Trusted - VibeRadar", layout="centered")
+    st.set_page_config(page_title="Trusted - VibeRadar", layout="wide")
     st.title("🔒 Trusted Zone")
     st.header("Why VibeRadar is Trusted by Businesses")
 
