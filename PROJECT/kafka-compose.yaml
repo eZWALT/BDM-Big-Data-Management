@@ -1,0 +1,31 @@
+
+services:
+  # Zookeeper (Required for Kafka)
+  # Fixed 3.9.3 version
+  kafka-zookeeper:
+    image: bitnami/zookeeper:3.9.3
+    container_name: kafka-zookeeper
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    restart: unless-stopped
+
+  # Kafka (Streaming Platform)
+  # Fixed 3.9.0 version
+  kafka:
+    image: bitnami/kafka:3.9.0
+    container_name: kafka
+    depends_on:
+      - kafka-zookeeper
+    ports:
+      - "9092:9092"
+    restart: unless-stopped
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: kafka-zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 1
+      KAFKA_MESSAGE_MAX_BYTES: 1000000        # Max 100 MB
+      log.retention.ms: 3600000             # Retain messages for only 1h 

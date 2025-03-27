@@ -1,200 +1,22 @@
+include:
+  - airflow-compose.yaml
+  - kafka-compose.yaml
+  - spark-compose.yaml
+
 services:
-  # TODO: refactor using hostnames instead of ips
-  # # Zookeeper (Required for Kafka)
-  # # Fixed 3.9.3 version
-  # zookeeper:
-  #   image: bitnami/zookeeper:3.9.3
-  #   container_name: viberadar_zookeeper
-  #   networks:
-  #     - bigdata_network
-  #   environment:
-  #     - ALLOW_ANONYMOUS_LOGIN=yes
-  #   ports:
-  #     - "2181:2181"
-  #   restart: unless-stopped
-
-  # # Kafka (Streaming Platform)
-  # # Fixed 3.9.0 version
-  # kafka:
-  #   image: bitnami/kafka:3.9.0
-  #   container_name: viberadar_kafka
-  #   networks:
-  #     - bigdata_network
-  #   depends_on:
-  #     - zookeeper
-  #   ports:
-  #     - "9092:9092"
-  #   restart: unless-stopped
-  #   environment:
-  #     KAFKA_BROKER_ID: 1
-  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-  #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-  #     KAFKA_LOG_RETENTION_HOURS: 1
-  #     KAFKA_MESSAGE_MAX_BYTES: 1000000        # Max 100 MB
-  #     log.retention.ms: 3600000             # Retain messages for only 1h 
-
-    
-
-  # # PostgreSQL (Metadata Store + Airflow)
-  # postgres:
-  #   image: postgres:17-alpine
-  #   container_name: viberadar_postgres
-  #   networks:
-  #     - bigdata_network
-  #   # TODO: Define volumes for postgres
-  #   volumes:
-  #     - ~/apps/postgres:/var/lib/postgresql/data
-  #   environment:
-  #     - POSTGRES_USER=airflow
-  #     - POSTGRES_PASSWORD=airflow
-  #     - POSTGRES_DB=airflow
-  #   ports:
-  #     - "5432:5432"
-
-  # # Apache Airflow (Workflow Orchestration)
-  # # Fixed version 2.10.0 to avoid nightmares with SQLAlchemy and other packages
-  # # However airflow runs multiple processes:
-  # # 1. Scheduler
-  # # 2. Webserver
-  # # 3. Worker (Only if we needed to use CeleryExecutor for distributed)
-  # airflow-scheduler:
-  #   image: apache/airflow:2.10.0
-  #   container_name: viberadar_airflow_scheduler
-  #   restart: always
-  #   networks:
-  #     - bigdata_network
-  #   depends_on:
-  #     - postgres
-  #   environment:
-  #     - LOAD_EX=n 
-  #     - EXECUTOR=Local 
-  #     - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://admin:airflow@postgres:5432/metadata_db
-  #   ports:
-  #     - "8090:8080"
-  #   volumes:
-  #     # DAG Folder 
-  #     - ./airflow/dags:/user/local/airflow/dags
-  #     # Spark Script folder (same path as airflow)
-  #     - ./spark/app:/usr/local/spark/app
-  #     # Spark Resources folder (same path as airflow)
-  #     - ./spark/resource:/usr/local/spark/resources 
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
-  #     interval: 30s 
-  #     timeout: 30s 
-  #     retries: 2
-  #   command: scheduler
-
-  # airflow-webserver:
-  #   image: apache/airflow:2.10.0
-  #   container_name: viberadar_airflow_webserver
-  #   restart: always
-  #   networks:
-  #       - bigdata_network
-  #   depends_on:
-  #       - postgres
-  #       - airflow-scheduler
-  #   environment:
-  #       - LOAD_EX=n
-  #       - EXECUTOR=Local 
-  #   volumes:
-  #       - ../dags:/usr/local/airflow/dags
-  #       - ../spark/app:/usr/local/spark/app
-  #       - ../spark/resources:/usr/local/spark/resources
-  #   ports:
-  #       - "8282:8282"
-  #   command: webserver
-  #   healthcheck:
-  #       test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
-  #       interval: 30s
-  #       timeout: 30s
-  #       retries: 3
-
-  # Apache Spark (Master node)
-  # HDFS + Delta lake are contained inside this image
-  spark-master:
-    image: bitnami/spark:3.5.1
-    user: root
-    container_name: spark-master
-    hostname: spark
-    networks:
+  streamlit-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: streamlit-frontend
+    networks: 
       - bigdata_network
-    environment:
-        SPARK_MODE: master
-      # Avoid letting lil spark cook
-        SPARK_RPC_AUTHENTICATION_ENABLED: no
-        SPARK_RPC_ENCRYPTION_ENABLED: no
-        SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: no
-        SPARK_SSL_ENABLED: no
-        SPARK_USER: spark
-        SPARK_UI_PORT: 8089
     ports:
-        - "7077:7077" # MASTER PORTS
-        - "8089:8080" # SPARK DASHBOARD UI
-    volumes:
-      # Spark Script folder (same path as airflow)
-      - ./spark/app:/usr/local/spark/app
-      # Spark Resources folder (same path as airflow)
-      - ./spark/resource:/usr/local/spark/resources 
-      # Tests paths
-      - ./spark/tests:/usr/local/spark/tests
-  spark-worker-1:
-    image: bitnami/spark:3.5.1
-    user: root 
-    hostname: spark-worker-1
-    container_name: spark-worker-1
-    networks:
-      - bigdata_network
-    environment:
-        SPARK_MODE: worker
-        SPARK_MASTER_URL: spark://spark:7077
-        SPARK_WORKER_MEMORY: 1G
-        SPARK_WORKER_CORES: 1
-        SPARK_RPC_AUTHENTICATION_ENABLED: no
-        SPARK_RPC_ENCRYPTION_ENABLED: no
-        SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: no
-        SPARK_SSL_ENABLED: no
-        SPARK_USER: spark
-    ports:
-        - "8081:8081" # SPARK DASHBOARD UI
-        
-  spark-worker-2:
-    image: bitnami/spark:3.5.1
-    user: root 
-    hostname: spark-worker-2
-    container_name: spark-worker-2
-    networks:
-      - bigdata_network
-    environment:
-        SPARK_MODE: worker
-        SPARK_MASTER_URL: spark://spark:7077
-        SPARK_WORKER_MEMORY: 1G
-        SPARK_WORKER_CORES: 1
-        SPARK_RPC_AUTHENTICATION_ENABLED: no
-        SPARK_RPC_ENCRYPTION_ENABLED: no
-        SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: no
-        SPARK_SSL_ENABLED: no
-        SPARK_USER: spark
-    ports:
-        - "8082:8082" # SPARK DASHBOARD UI
-        
-  #   streamlit-frontend:
-  #     build:
-  #       context: .
-  #       dockerfile: Dockerfile
-  #     container_name: streamlit-frontend
-  #     networks: 
-  #       - bigdata_network
-  #     ports:
-  #       - 9999:9999
-  #     working_dir: /app 
-  #     restart: unless-stopped
+      - 9999:9999
+    working_dir: /app 
+    restart: unless-stopped
 
 networks:
   bigdata_network:
     driver: bridge
 
-# TODO: Define which volumes are needed
