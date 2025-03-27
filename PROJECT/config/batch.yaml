@@ -1,0 +1,3 @@
+producers:
+  - name: "bluesky-batch-producer"
+    py_object: "src.ingestion.batch.bluesky_batch:BlueskyBatchProducer"
