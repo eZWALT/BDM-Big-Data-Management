@@ -2,12 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 import json
-
-# Function to list files in a directory
-def list_files(directory, extensions=(".csv", ".json", ".parquet")):
-    if not os.path.exists(directory):
-        return []
-    return [f for f in os.listdir(directory) if f.endswith(extensions)]
+from streamlit_file_browser import st_file_browser
 
 # Function to load and display data
 def load_file(filepath):
@@ -33,7 +28,7 @@ def load_file(filepath):
         st.error("❌ Unsupported file type!")
 
 # Streamlit UI Layout
-def show_layout():
+def show_layout(datalake_path: str):
     st.set_page_config(page_title="Landing Zone (Bronze) 🥉", layout="wide")
     st.title("Landing Zone (Bronze) 🥉")
 
@@ -57,26 +52,25 @@ def show_layout():
             """
         )
 
-    st.markdown("🔍 **Browse and preview the raw data like below!**")
+    st.markdown("🔍 **Browse and preview the raw data below!**")
 
-    # Select directory
-    data_dir = st.text_input("📂 Enter Data Lake Path:", value="./data_lake")
+    # File Browser Component
+    st.header("📂 File Browser")
 
-    if os.path.exists(data_dir):
-        files = list_files(data_dir)
-        
-        if files:
-            selected_files = st.multiselect("📄 Select files:", files)
-            
-            if st.button("🔍 Load Files") and selected_files:
-                for file in selected_files:
-                    filepath = os.path.join(data_dir, file)
-                    load_file(filepath)
-        else:
-            st.warning("⚠️ No CSV, JSON, or Parquet files found in the selected directory.")
-
-    else:
-        st.error("❌ Invalid directory! Please enter a valid path.")
+    event = st_file_browser(
+        datalake_path,  
+        key="file_browser",
+        show_choose_file=True,
+        show_choose_folder=True,
+        #show_delete_file=True,
+        show_download_file=True,
+        show_new_folder=True,
+        show_upload_file=True,
+        #show_rename_file=True,
+        #show_rename_folder=True,
+    )
+    # This show the picked file
+    # st.write(event)
 
 if __name__ == "__main__":
-    show_layout()
+    show_layout(datalake_path="./data_lake")
