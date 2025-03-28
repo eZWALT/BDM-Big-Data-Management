@@ -2,9 +2,8 @@ import streamlit as st
 import pandas as pd
 import os
 import json
-import pyarrow.parquet as pq
 
-# Function to list files in the directory
+# Function to list files in a directory
 def list_files(directory, extensions=(".csv", ".json", ".parquet")):
     if not os.path.exists(directory):
         return []
@@ -31,16 +30,38 @@ def load_file(filepath):
         st.dataframe(df)
 
     else:
-        st.error("Unsupported file type!")
+        st.error("❌ Unsupported file type!")
 
 # Streamlit UI Layout
 def show_layout():
     st.set_page_config(page_title="Landing Zone (Bronze) 🥉", layout="wide")
     st.title("Landing Zone (Bronze) 🥉")
-    
+
+    st.warning("⚠️ Work in Progress. Functionality may be limited ⚠️")
+
+    st.markdown("""
+    ### 📥 What is the Landing Zone?
+    The **Landing Zone (Bronze)** is the **raw data layer** of the pipeline.  
+    This is where **raw, unprocessed** data is first ingested from different sources before undergoing transformation.  
+    It serves as a **historical record** of all incoming data.
+    """)
+
+    with st.expander("View Landing Zone Description"):
+        st.markdown("### 💾 Landing Zone:")
+        st.write(
+            """
+            - **Raw Data Ingestion**: Collecting raw data from multiple sources.
+            - **Format Variability**: Data arrives in different formats (CSV, JSON, Parquet, etc.).
+            - **Initial Storage**: Storing unprocessed data before transformations.
+            - **Metadata Capture**: Capturing timestamps, file origins, and other metadata for traceability.
+            """
+        )
+
+    st.markdown("🔍 **Browse and preview the raw data like below!**")
+
     # Select directory
-    data_dir = st.text_input("📂 Enter Data Lake Path:", value="/path/to/data/lake")
-    
+    data_dir = st.text_input("📂 Enter Data Lake Path:", value="./data_lake")
+
     if os.path.exists(data_dir):
         files = list_files(data_dir)
         
@@ -52,10 +73,10 @@ def show_layout():
                     filepath = os.path.join(data_dir, file)
                     load_file(filepath)
         else:
-            st.warning("No CSV, JSON, or Parquet files found in the selected directory.")
+            st.warning("⚠️ No CSV, JSON, or Parquet files found in the selected directory.")
 
     else:
-        st.error("Invalid directory! Please enter a valid path.")
+        st.error("❌ Invalid directory! Please enter a valid path.")
 
 if __name__ == "__main__":
     show_layout()

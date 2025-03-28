@@ -2,29 +2,30 @@
 
 import streamlit as st
 
-def trusted_page():
-    st.set_page_config(page_title="Trusted - VibeRadar", layout="wide")
-    st.title("🔒 Trusted Zone")
-    st.header("Why VibeRadar is Trusted by Businesses")
+def show_layout():
+    st.set_page_config(page_title="Trusted Zone (Silver) 🥈", layout="wide")
+    st.title("Trusted Zone (Silver) 🥈")
 
-    st.write(
-        """
-        Our platform is built on robust, secure, and scalable infrastructure that guarantees the privacy 
-        and accuracy of your data. We use cutting-edge machine learning algorithms and data encryption 
-        protocols to ensure the highest level of trust for our clients.
-        """
-    )
-    st.markdown("### Key Trust Features:")
-    st.write(
-        """
-        - **Data Privacy**: We prioritize the protection of your data with encryption at rest and in transit.
-        - **Security**: VibeRadar follows best industry practices for securing consumer data and business insights.
-        - **Transparency**: We provide complete transparency in data collection and analysis processes.
-        """
-    )
+    st.warning("⚠️ Work in Progress. Functionality may be limited⚠️")
+
+    st.markdown("""
+    ### 🔐 What is the Trusted Zone?
+    The **Trusted Zone (Silver)** is where raw ingested data from the **Landing Zone (Bronze)** gets **cleaned, validated, and structured**.
+    Data transformations, deduplication, and schema enforcement occur here before moving to the **Exploitation Zone (Gold)**.
+    """)
+    
+    with st.expander("View Trusted Zone Description"):
+        st.markdown("### 🧹 Trusted Zone Key Processes:")
+        st.write(
+            """
+            - **Data Cleansing**: Removing duplicates, handling missing values, and standardizing formats.
+            - **Schema Validation**: Ensuring data adheres to defined schemas for consistency.
+            - **Deduplication & Enrichment**: Merging records, adding metadata, and preparing data for analysis.
+            - **Homogenization of data**: Data from different social medias have widely different formats that need some structuring.
+            """
+        )
 
     st.markdown("🔍 **Explore more about our trusted platform and data security features!**")
-    st.markdown("[Back to Home](pages/landing.py)")
 
 if __name__ == "__main__":
-    trusted_page()
+    show_layout()

@@ -4,13 +4,11 @@ import pandas as pd
 # ===----------------------------------------------------------------------===#
 # Home                                                                        #
 #                                                                             #
-# This file represents the main entrypoint of the streamlit front-end         #
-# and can be extended by the pages/ relative directory which allows for multi #
-# pages frontend. The homepage is simple and merely informative of the product#
+# This file represents the main entry point of the Streamlit front-end.       #
+# Additional pages are located under the 'pages/' directory.                  #
 #                                                                             #
 # Author: Walter J.T.V                                                        #
 # ===----------------------------------------------------------------------===#
-
 
 def show_layout():
     # Set page configuration
@@ -22,60 +20,57 @@ def show_layout():
 
     st.write(
         """
-    In today’s fast-moving digital world, social networks shape consumer behavior like never before. 
-    **VibeRadar** is a cutting-edge SaaS platform that empowers businesses with real-time insights into 
-    **product launches, brand perception, and audience engagement** across global social platforms.
-    With VibeRadar, companies can **optimize marketing strategies, improve decision-making, and stay ahead of trends**—all backed by a scalable, secure, and continuously evolving analytics platform.
+    In today’s digital era, social media shapes consumer behavior like never before.  
+    **VibeRadar** is an advanced SaaS platform that provides real-time insights into **product launches, brand perception, and audience engagement** across global social platforms.  
+    With **VibeRadar**, businesses can **optimize marketing strategies, enhance decision-making, and stay ahead of emerging trends**—all with a **scalable, secure, and continuously evolving** analytics solution.
     """
     )
 
-    st.image("resources/logo2.jpeg", caption="", width=720)
+    # Logo image
+    #st.image("resources/logo2.jpeg", caption="", width=720)
 
-    st.markdown("### 🚀 What We Offer:")
+    st.markdown("### What We Offer:")
     st.write(
         """
-    - **Impact Analytics**: Daily or weekly sentiment reports to track product reception.  
-    - **Real-time Monitoring**: Instant feedback on consumer sentiment, engagement, and trends.  
-    - **Deep Insights**: AI-driven analysis of demographics, view counts, and public discussions.  
+    - **📊 Impact Analytics** → Daily or weekly sentiment reports to track product reception.  
+    - **📡 Real-time Monitoring** → Instant insights on consumer sentiment, engagement, and trends.  
+    - **🔎 Deep Insights** → AI-driven analysis of demographics, view counts, and public discussions.  
     """
     )
 
-    st.markdown(
-        "🔍 **Explore our platform and start making data-driven decisions today!**"
-    )
+    st.markdown("💡 **Leverage data-driven insights to make smarter business decisions today!**")
 
     # Navigation tutorial & Call to action
     st.header("How to Navigate")
     st.write(
         """
-    - **Data Ingestion**: Interact and test out data ingestion for your product!
-    - **Landing Zone**: Visualize and interact with the landing zone!
+    - **🥉 Landing Zone** → View and interact with raw ingested data.  
+    - **🥈 Trusted Zone** → Explore transformed and validated data.  
+    - **🏆 Exploitation Zone** → Access high-quality, analytics-ready datasets.  
+    - **📡 Streaming** → Monitor real-time consumer sentiment and brand impact.  
     """
     )
 
     st.header("Get Started!")
-    st.write(
-        """
-    Click below to execute the 2 data pipelines and visualize the interactive analytics:
-    """
-    )
-    st.page_link(
-        "pages/ingestion.py", label="Data Ingestion", icon="🛠️", use_container_width=True
-    )
-    st.page_link(
-        "pages/landing.py",
-        label="Landing Zone (Bronze)",
-        icon="🥉",
-        use_container_width=True,
-    )
+    st.write("Click below to explore the various zones and interactive analytics:")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.page_link("pages/landing.py", label="🥉 Landing Zone (Bronze)", icon="🥉", use_container_width=True)
+    with col2:
+        st.page_link("pages/trusted.py", label="🥈 Trusted Zone (Silver)", icon="🥈", use_container_width=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.page_link("pages/exploitation.py", label="🏆 Exploitation Zone (Gold)", icon="🏆", use_container_width=True)
+    with col2:
+        st.page_link("pages/streaming.py", label="📡 Real-Time Streaming", icon="📡", use_container_width=True)
 
     # Team credits
-    st.header("Credits")
-    st.write("### Team Members")
+    st.header("👥 Team")
     st.write("- **Walter J. Troiani Vargas**")
     st.write("- **Mateja Zetazalo**")
     st.write("- **Marc Parcerisa**")
-
 
 if __name__ == "__main__":
     show_layout()
