@@ -116,11 +116,18 @@ def main():
     
     # Fetch historical data
     tweets = twitter_client.fetch_tweets(recent_url, "AirJordan", twitter_client.bearer_token)
-    #print(tweets)
     if tweets and 'data' in tweets:
         print(json.dumps(tweets['data'][0], indent=4))  
 
-    # Fetch replies to the tweets
+    # Convert to JSON file
+    tweets_df = pd.DataFrame([tweets])
+    tweets_df.to_json('../landing/twitter_data.json', orient='records', lines=True)
+
+    """"
+    Due to limited access to Twitter API (15 minutes per 1 call), we will not 
+    be using replies as a measure
+    
+    
     tweet_replies = {}
     if 'data' in tweets:
       for tweet in tweets['data']:  
@@ -129,11 +136,8 @@ def main():
           tweet_replies[tweet['id']] = replies
           print("Tweet ID:", tweet['id'], "Replies:", replies)
     else:
-        print("No data found or incorrect data structure.")
-
-    # Convert JSON data to a DataFrame if 'data' key is present
-    tweets_df = pd.DataFrame(tweets)
-
+        print("No data found or incorrect data structure.")"
+    """
 
 if __name__ == "__main__":
     main()
