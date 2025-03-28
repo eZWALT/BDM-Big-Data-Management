@@ -101,15 +101,15 @@ PYTHONPATH=. pytest tests/
 ```
 
 ## TODO
-
-- [x] add Kafka Streaming infrastructure
-- [x] test kafka
-- [x] add streamlit to docker and test it
-- [ ] test locally airflow
-- [x] add Docker compose airflow
-- [x] test spark docker compose
-- [x] do async api ingestion
-- [ ] Improve Streamlit presentation
+- [ ] Everybody do their BatchProducerTask (ETL)             (Marc)
+- [ ] Finalize the streaming (just landing)                  (Marc, Walter)
+- [ ] Add functionality to the streamlit (landing zone page) (Walter)
+- [ ] Debug & test dynamic dags (Airflow)                    (Walter)
+- [ ] Test Docker compose (Everything tighted up)            (Marc, Mateja)
+- [ ] Get delta table folder working                         (Mateja)
+- [ ] Automatize delta lake (dag) and put it in docker?      (Mateja, Walter)
+- [ ] Writing the final report                               (Mateja, Marc, Walter)
+      
 
 ## Credits
 
