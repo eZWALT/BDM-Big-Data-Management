@@ -1,7 +1,6 @@
 from pyspark.sql import SparkSession
 from delta import *
 from pyspark.sql.functions import col
-from src.ingestion.twitter_client import tweets_df
 
 def delete_from_delta_table(spark, delta_table_path):
     """
@@ -28,19 +27,18 @@ def main():
         .getOrCreate()
 
     # Define the path for the Delta table
-    delta_table_path = "src/landing/delta-table"
+    delta_table_path = "data_lake/landing/persistent/delta-table"
 
     #delete_from_delta_table(spark, delta_table_path)
 
-    # Load the Delta table
-    #df = spark.read.format("delta").load(delta_table_path)
-    #df.show()
+    # Path where we get the data from
+    data_path = "data_lake/landing/temporal/twitter_data.csv"
 
-    # Read the JSON into a DataFrame
-    tweets_df = spark.read.csv('/data/tweets.json', header=True, inferSchema=True)
+    # Read the CSV into a DataFrame
+    tweets_df = spark.read.format("csv").load(data_path)
 
     # Write data to Delta Lake
-    tweets_df.write.format("delta").mode("append").save(delta_table_path)
+    tweets_df.write.format("delta").mode("overwrite").save(delta_table_path)
 
     # Load the Delta table
     df = spark.read.format("delta").load(delta_table_path)

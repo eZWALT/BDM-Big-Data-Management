@@ -28,7 +28,7 @@ class TwitterAPIClient():
       tweet_fields = "author_id,created_at,public_metrics"      
 
       headers = {"Authorization": f"Bearer {bearer_token}"}
-      params = {"query": keyword, "max_results": "10", "tweet.fields": tweet_fields}
+      params = {"query": keyword, "max_results": "20", "tweet.fields": tweet_fields}
 
       response = requests.get(recent_url, headers=headers, params=params)
       if response.status_code == 200:
@@ -119,14 +119,13 @@ def main():
     if tweets and 'data' in tweets:
         print(json.dumps(tweets['data'][0], indent=4))  
 
-    # Convert to JSON file
+    # Convert to CSV file
     tweets_df = pd.DataFrame([tweets])
-    tweets_df.to_json('../landing/twitter_data.json', orient='records', lines=True)
+    tweets_df.to_csv("data_lake/landing/temporal/twitter_data.csv", index=False)
 
     """"
     Due to limited access to Twitter API (15 minutes per 1 call), we will not 
     be using replies as a measure
-    
     
     tweet_replies = {}
     if 'data' in tweets:
