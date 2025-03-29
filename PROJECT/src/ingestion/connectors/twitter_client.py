@@ -1,9 +1,8 @@
-import json
 import os
 import pprint
 import time
 import urllib.parse
-from typing import List, Tuple
+from typing import List, Optional, Tuple, TypedDict
 
 import requests
 from loguru import logger
@@ -16,10 +15,34 @@ if __name__ == "__main__":
 from src.utils.config import ConfigManager
 
 # ===-----------------------------------------------------------------------===#
-# Twitter API Client                                                          #
-#                                                                             #
-# Author: Mateja Zatezalo                                                     #
+# Twitter API Client                                                           #
+#                                                                              #
+# Author: Mateja Zatezalo, Marc Pracerisa                                      #
 # ===-----------------------------------------------------------------------===#
+
+
+class TweetData(TypedDict):
+    class PublicMetrics(TypedDict):
+        retweet_count: int
+        reply_count: int
+        like_count: int
+
+    id: str
+    text: str
+    created_at: str
+    public_metrics: PublicMetrics
+
+
+class MetaData(TypedDict):
+    result_count: int
+    newest_id: str
+    oldest_id: str
+    next_token: Optional[str]
+
+
+class TwitterResponse(TypedDict):
+    data: List[TweetData]
+    meta: MetaData
 
 
 class TwitterAPIClient:
@@ -71,73 +94,51 @@ class TwitterAPIClient:
         response.raise_for_status()  # Raise an error for bad responses
         return response.json()
 
-    def fetch_tweets(self, query: str, limit: int = None) -> Tuple[List[dict], str]:
+    def fetch_tweets(self, query: str, limit: int = None) -> Tuple[List[TweetData], str]:
         """Fetch recent tweets based on a keyword."""
-        # Example JSON Response: (for me to know how it looks like)
-        # {
-        #     "data": [
-        #         {
-        #         "id": "1234567890",
-        #         "text": "Sample tweet text here...",
-        #         "created_at": "2021-07-01T12:00:00.000Z",
-        #         "public_metrics": {
-        #             "retweet_count": 100,
-        #             "reply_count": 50,
-        #             "like_count": 500
-        #         }
-        #         }
-        #     ],
-        #     "meta": {
-        #         "result_count": 1,
-        #         "newest_id": "1234567890",
-        #         "oldest_id": "1234567890",
-        #         "next_token": "b26v89c19zqg8o3fos5t9w8kd"
-        #     }
-        # }
         # Specify tweet fields to be included in the response
         # can include 'lang' as in language as well etc.
         tweet_fields = "author_id,created_at,public_metrics"
         params = {"query": query, "tweet.fields": tweet_fields}
         if limit:
             params["max_results"] = str(limit)
-        response = self._request("GET", "tweets/search/recent", params=params)
+        response: TwitterResponse = self._request("GET", "tweets/search/recent", params=params)
         posts = response.get("data", [])
         total_posts = len(posts)
         while limit is not None and total_posts < limit and response.get("meta", {}).get("next_token"):
             params["token"] = response.get("meta", {}).get("next_token")
             if limit:
                 params["max_results"] = str(limit - total_posts)
-            response = self._request("GET", "tweets/search/recent", params=params)
+            response: TwitterResponse = self._request("GET", "tweets/search/recent", params=params)
             posts.extend(response.get("data", []))
             total_posts += len(response.get("data", []))
         return posts, response.get("meta", {}).get("next_token")
 
-    # Fetch replies to tweets to later analyze the sentiment
-    def fetch_replies(self, recent_url, tweet_id, author_id, bearer_token):
-
+    def fetch_replies(self, tweet_id: str, author_id: str, limit: int = None) -> Tuple[List[dict], str]:
+        """Fetch replies to a specific tweet."""
+        # NOTE: Twitter API is too slow for fetching replies, so this will most likely not be used
         # Query for getting tweets referenced to original tweet (reply)
         # tweet_id is the ID of original tweet
         query = f"conversation_id:{tweet_id} to:{author_id}"
         tweet_fields = "created_at,author_id"
-        headers = {"Authorization": f"Bearer {bearer_token}"}
-        params = {"query": query, "tweet.fields": tweet_fields, "max_results": "10"}
+        params = {"query": query, "tweet.fields": tweet_fields}
+        if limit:
+            params["max_results"] = str(limit)
 
-        response = requests.get(recent_url, headers=headers, params=params)
-        if response.status_code == 200:
-            return response.json()
-        elif response.status_code == 429:
-            self._wait_rate_limit(response)
-            # Retry the request after rate limit handling
-            return self.fetch_replies(recent_url, tweet_id, author_id, bearer_token)
-        else:
-            print(response.status_code, response.text)
+        response = self._request("GET", "tweets/search/recent", params=params)
+        replies = response.get("data", [])
+        total_replies = len(replies)
+        while limit is not None and total_replies < limit and response.get("meta", {}).get("next_token"):
+            params["token"] = response.get("meta", {}).get("next_token")
+            if limit:
+                params["max_results"] = str(limit - total_replies)
+            response = self._request("GET", "tweets/search/recent", params=params)
+            replies.extend(response.get("data", []))
+            total_replies += len(response.get("data", []))
+        return replies, response.get("meta", {}).get("next_token")
 
 
 def main():
-
-    # URL for recent tweets
-    recent_url = "https://api.twitter.com/2/tweets/search/recent"
-
     # Initialize the Twitter API client
     twitter_client = TwitterAPIClient()
 
@@ -149,15 +150,10 @@ def main():
 
     # Fetch replies to the tweets
     tweet_replies = {}
-    if "data" in tweets:
-        for tweet in tweets["data"]:
-            replies = twitter_client.fetch_replies(
-                recent_url, tweet["author_id"], tweet["id"], twitter_client.bearer_token
-            )  # Fetching replies using the tweet ID
-            tweet_replies[tweet["id"]] = replies
-            print("Tweet ID:", tweet["id"], "Replies:", replies)
-    else:
-        print("No data found or incorrect data structure.")
+    for tweet in tweets:
+        replies = twitter_client.fetch_replies(tweet["id"], tweet["author_id"])
+        tweet_replies[tweet["id"]] = replies
+        print("Tweet ID:", tweet["id"], "Replies:", replies)
 
 
 if __name__ == "__main__":

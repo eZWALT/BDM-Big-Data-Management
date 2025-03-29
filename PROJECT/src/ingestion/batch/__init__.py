@@ -35,6 +35,12 @@ if __name__ == "__main__":
 from src.utils.config import ConfigManager
 from src.utils.task import Task, TaskStatus
 
+# ===-----------------------------------------------------------------------===#
+# Batch Producing Base Classes and Connection Abstractions                     #
+#                                                                              #
+# Author: Marc Parcerisa                                                       #
+# ===-----------------------------------------------------------------------===#
+
 P = ParamSpec("P")
 R = TypeVar("R")
 Rint = TypeVar("Rint", bound=int)

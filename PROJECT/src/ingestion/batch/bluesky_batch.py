@@ -8,6 +8,12 @@ from src.ingestion.connectors.bluesky_client import BlueSkyAPIClient
 
 from . import BatchProducer, DBConnection
 
+# ===-----------------------------------------------------------------------===#
+# BlueSky Batch Producer                                                       #
+#                                                                              #
+# Author: Marc Parcerisa                                                       #
+# ===-----------------------------------------------------------------------===#
+
 
 class BlueskyBatchProducer(BatchProducer):
     def __init__(self):

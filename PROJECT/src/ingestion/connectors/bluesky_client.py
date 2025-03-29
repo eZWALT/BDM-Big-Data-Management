@@ -10,12 +10,13 @@ if __name__ == "__main__":
 
 from src.utils.config import ConfigManager
 
-
 # ===-----------------------------------------------------------------------===#
 # BlueSky API Client                                                           #
 #                                                                              #
 # Author: Marc Parcerisa                                                       #
 # ===-----------------------------------------------------------------------===#
+
+
 class BlueSkyAPIClient(object):
     def __init__(self, email: str = None, password: str = None, base_url: str = None):
         self.config_manager = ConfigManager(config_path="config/api.yaml")
