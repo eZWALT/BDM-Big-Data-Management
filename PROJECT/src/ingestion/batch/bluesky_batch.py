@@ -119,4 +119,4 @@ class BlueskyBatchProducer(BatchProducer):
                 self._load_likes_to_db(likes_minibatch, post_uri, db_connection)
                 total_likes += len(likes_minibatch)
 
-        return total_posts + total_likes
+        return total_posts
