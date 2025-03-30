@@ -11,6 +11,7 @@ services:
     container_name: streamlit-frontend
     networks: 
       - bigdata_network
+      - default # Airflow network needed to connect streamlit and airflow
     ports:
       - 9999:9999
     working_dir: /app 

@@ -4,7 +4,9 @@ import json
 from streamlit_file_browser import st_file_browser
 
 # Airflow API Configuration (Extracted from Docker Compose)
-AIRFLOW_URL = "http://localhost:8080/api/v1"
+LOCAL_TEST = True
+# Base API URL
+AIRFLOW_URL = "http://localhost:8080/api/v1" if LOCAL_TEST else "http://airflow-webserver:8080/api/v1"
 # Inter-container dummy auth
 AIRFLOW_AUTH = ("airflow", "airflow")  
 
