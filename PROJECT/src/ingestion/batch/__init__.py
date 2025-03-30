@@ -4,7 +4,7 @@ import json
 import os
 import time
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from hashlib import sha256
 from re import finditer
@@ -394,4 +394,4 @@ def _discover_db_connections(kwargs: dict, **placeholder_values: Any) -> dict:
 if __name__ == "__main__":
     # Example usage
     task = BatchProduceTask()
-    task.execute(["water jordan"], utc_since=datetime(2025, 3, 20), utc_until=datetime(2025, 3, 30))
+    task.execute(["water jordan"], utc_since=datetime.now() - timedelta(days=2), utc_until=datetime.now())
