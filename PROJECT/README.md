@@ -81,7 +81,7 @@ In order to make use of front-end to visualize and inspect the data management p
 ```sh
 
 streamlit run src/frontend/home.py
-xdg-open http://0.0.0.0:9999  # Open the browser in Ubuntu
+xdg-open http://localhost:8501  # Open the browser in Ubuntu
 ```
 
 ### Social Media API's
@@ -94,17 +94,26 @@ xdg-open http://0.0.0.0:9999  # Open the browser in Ubuntu
 
 ## Testing suite
 
+### Project 
 To contribute to our test-driven development, we continiously produce unit tests, which can be executed inside the docker environment using the following command from the base project path:
 
 ```sh
 PYTHONPATH=. pytest tests/
 ```
 
+### Airflow
+
+Notice that also DAG tests can be found in `airflow/tests` in order to verify the correct working of airflow.
+
+```sh
+PYTHONPATH=. pytest airflow/tests/
+```
+
 ## TODO
 - [x] Everybody do their BatchProducerTask (ETL)             (Marc)
 - [ ] Finalize the streaming (just landing)                  (Marc, Walter)
-- [ ] Add functionality to the streamlit (landing zone page) (Walter)
-- [ ] Debug & test dynamic dags (Airflow)                    (Walter)
+- [x] Add functionality to the streamlit (landing zone page) (Walter)
+- [x] Debug & test dynamic dags (Airflow)                    (Walter)
 - [ ] Test Docker compose (Everything tighted up)            (Marc, Mateja)
 - [ ] Get delta table folder working                         (Mateja)
 - [ ] Automatize delta lake (dag) and put it in docker?      (Mateja, Walter)
