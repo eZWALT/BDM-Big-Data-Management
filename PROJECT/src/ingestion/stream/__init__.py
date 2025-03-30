@@ -229,3 +229,9 @@ class KafkaAdmin(KafkaAdminClient):
 
         except Exception as e:
             logger.error(f"Error deleting topics: {e}")
+
+
+if __name__ == "__main__":
+    # Example usage
+    task = StreamingProduceTask()
+    task.execute(["water jordan"])

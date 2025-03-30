@@ -5,7 +5,7 @@ from loguru import logger
 
 from src.ingestion.connectors.models.youtube import VideoBasicData
 from src.ingestion.connectors.youtube_client import YoutubeAPIClient
-from src.ingestion.streaming import StreamProducer
+from src.ingestion.stream import StreamProducer
 
 # ===-----------------------------------------------------------------------===#
 # Youtube Streaming Producer                                                   #
