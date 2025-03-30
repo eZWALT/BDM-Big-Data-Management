@@ -54,8 +54,8 @@ class BatchProducer(ABC):
         @wraps(func)
         def wrapper(self: "BatchProducer", *args: P.args, **kwargs: P.kwargs) -> Rint:
             query = kwargs.get("query", args[0] if args else None)
-            since = kwargs.get("utc_since", args[2] if len(args) > 2 else None)
-            until = kwargs.get("utc_until", args[3] if len(args) > 3 else None)
+            since = kwargs.get("utc_since", args[1] if len(args) > 1 else None)
+            until = kwargs.get("utc_until", args[2] if len(args) > 2 else None)
             # Split the PascalCase class name into words
             matches = finditer(".+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)", self.__class__.__name__)
             cls_name = " ".join(m.group(0) for m in matches).upper()
