@@ -158,7 +158,7 @@ class StreamProduceTask(Task):
                     )
                 process = Process(
                     target=producer(self.kafka_config["bootstrap_servers"], topic).produce_forever,
-                    args=(query),
+                    args=(query,),
                     kwargs=kwargs,
                     name=topic,
                     daemon=True,
