@@ -1,5 +1,5 @@
 producers:
-  - name: bluesky-batch-producer
+  - name: bluesky-batch
     py_object: src.ingestion.batch.bluesky_batch:BlueskyBatchProducer
     kwargs:
       posts_batch_size: 100
@@ -14,7 +14,7 @@ producers:
         db_type: jsonl-file
         kwargs:
           file: data_lake/landing/temporal/{topic}/posts.jsonl
-  - name: twitter-batch-producer
+  - name: twitter-batch
     py_object: src.ingestion.batch.twitter_batch:TwitterBatchProducer
     kwargs:
       posts_batch_size: 100
@@ -23,7 +23,7 @@ producers:
         db_type: jsonl-file
         kwargs:
           file: data_lake/landing/temporal/{topic}/posts.jsonl
-  - name: youtube-batch-producer
+  - name: youtube-batch
     py_object: src.ingestion.batch.youtube_batch:YoutubeBatchProducer
     kwargs:
       videos_batch_size: 1
