@@ -83,13 +83,15 @@ class TwitterAPIClient:
                 raise e
         return response.json()
 
-    def fetch_tweets(self, query: str, limit: int = None) -> Tuple[List[TweetData], str]:
+    def fetch_tweets(self, query: str, limit: int = None) -> Tuple[List[TweetData], Optional[str]]:
         """Fetch recent tweets based on a keyword."""
         # Specify tweet fields to be included in the response
         # can include 'lang' as in language as well etc.
         tweet_fields = "author_id,created_at,public_metrics"
         params = {"query": query, "tweet.fields": tweet_fields}
         if limit:
+            if not 10 <= limit <= 100:
+                raise ValueError("Limit must be between 10 and 100.")
             params["max_results"] = str(limit)
         response: TwitterResponse = self._request("GET", "tweets/search/recent", params=params)
         posts = response.get("data", [])
@@ -132,7 +134,7 @@ def main():
     twitter_client = TwitterAPIClient()
 
     # Fetch historical data
-    tweets = twitter_client.fetch_tweets("AirJordan", limit=5)
+    tweets = twitter_client.fetch_tweets("AirJordan", limit=10)
 
     print("Fetched tweets:")
     pprint.pprint(tweets)
