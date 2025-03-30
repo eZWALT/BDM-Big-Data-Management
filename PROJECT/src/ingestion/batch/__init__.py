@@ -235,13 +235,13 @@ class JSONLFileConnection(DBConnection):
         if os.path.exists(self.file_path) and not os.path.isfile(self.file_path):
             raise FileExistsError(f"File {self.file_path} already exists and is not a file.")
         self._file = open(self.file_path, "a")
-        logger.success(f"File {self.file_path} opened with JSONL format for writing.")
+        logger.info(f"File {self.file_path} opened with JSONL format for writing.")
 
     @_requires_file_open
     def close(self):
         self._file.close()
         self._file = None
-        logger.success(f"File {self.file_path} closed.")
+        logger.info(f"File {self.file_path} closed.")
 
     @_requires_file_open
     def add(self, data: dict):
