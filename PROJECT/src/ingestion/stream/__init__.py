@@ -114,7 +114,7 @@ def _load_stream_producer(py_object: str) -> Type[StreamProducer]:
     return cls
 
 
-class StreamingProduceTask(Task):
+class StreamProduceTask(Task):
     def __init__(self):
         super().__init__()
         self.config = ConfigManager("config/stream.yaml")
@@ -233,5 +233,5 @@ class KafkaAdmin(KafkaAdminClient):
 
 if __name__ == "__main__":
     # Example usage
-    task = StreamingProduceTask()
+    task = StreamProduceTask()
     task.execute(["water jordan"])
