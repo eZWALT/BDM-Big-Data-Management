@@ -1,10 +1,46 @@
 producers:
-  - name: "bluesky-batch-producer"
-    py_object: "src.ingestion.batch.bluesky_batch:BlueskyBatchProducer"
+  - name: bluesky-batch-producer
+    py_object: src.ingestion.batch.bluesky_batch:BlueskyBatchProducer
     kwargs:
       posts_batch_size: 100
       likes_batch_size: 100
-    db:
-      type: "jsonl-file"
-      kwargs:
-        folder: "data_lake/landing/temporal"
+      likes_db:
+        type: db
+        db_type: jsonl-file
+        kwargs:
+          file: data_lake/landing/temporal/{topic}/likes.jsonl
+      posts_db:
+        type: db
+        db_type: jsonl-file
+        kwargs:
+          file: data_lake/landing/temporal/{topic}/posts.jsonl
+  - name: youtube-batch-producer
+    py_object: src.ingestion.batch.youtube_batch:YoutubeBatchProducer
+    kwargs:
+      videos_batch_size: 1
+      comments_batch_size: 10
+      video_data_db:
+        type: db
+        db_type: jsonl-file
+        kwargs:
+          file: data_lake/landing/temporal/{topic}/videos.jsonl
+      comments_db:
+        type: db
+        db_type: jsonl-file
+        kwargs:
+          file: data_lake/landing/temporal/{topic}/comments.jsonl
+      videos_db:
+        type: db
+        db_type: files
+        kwargs:
+          folder: data_lake/landing/temporal/{topic}/videos
+      thumbnails_db:
+        type: db
+        db_type: files
+        kwargs:
+          folder: data_lake/landing/temporal/{topic}/thumbnails
+      audios_db:
+        type: db
+        db_type: files
+        kwargs:
+          folder: data_lake/landing/temporal/{topic}/audios

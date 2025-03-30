@@ -25,7 +25,6 @@ class BlueskyBatchProducer(BatchProducer):
         Load the given posts into the database.
         """
         db_connection.add_many(
-            "posts",
             [
                 {
                     "uri": post.uri,
@@ -50,7 +49,6 @@ class BlueskyBatchProducer(BatchProducer):
         Load the given likes into the database.
         """
         db_connection.add_many(
-            "likes",
             [
                 {
                     "actor_did": like.actor.did,
@@ -100,29 +98,30 @@ class BlueskyBatchProducer(BatchProducer):
     def produce(
         self,
         query: str,
-        db_connection: DBConnection,
-        utc_since: Optional[datetime] = None,
-        utc_until: Optional[datetime] = None,
+        utc_since: Optional[datetime],
+        utc_until: Optional[datetime],
+        posts_db: DBConnection,
+        likes_db: DBConnection,
         posts_batch_size: int = 100,
         likes_batch_size: int = 100,
     ):
         """
         Produce data from the BlueSky API using the provided query.
         """
-        db_connection.connect("posts")
-        db_connection.connect("likes")
         if utc_since is not None:
-            since = utc_since.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            utc_since = utc_since.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         if utc_until is not None:
-            until = utc_until.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            utc_until = utc_until.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
         total_posts = 0
         total_likes = 0
-        for post_minibatch in self._posts_generator(query, since=since, until=until, batch_size=posts_batch_size):
-            self._load_posts_to_db(post_minibatch, db_connection)
+        for post_minibatch in self._posts_generator(
+            query, since=utc_since, until=utc_until, batch_size=posts_batch_size
+        ):
+            self._load_posts_to_db(post_minibatch, posts_db)
             total_posts += len(post_minibatch)
             for likes_minibatch, post_uri in self._likes_generator(post_minibatch, batch_size=likes_batch_size):
-                self._load_likes_to_db(likes_minibatch, post_uri, db_connection)
+                self._load_likes_to_db(likes_minibatch, post_uri, likes_db)
                 total_likes += len(likes_minibatch)
 
         return total_posts

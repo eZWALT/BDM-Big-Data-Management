@@ -202,7 +202,7 @@ class BlueSkyAPIClient(object):
 if __name__ == "__main__":
     import argparse
 
-    from _bluesky_prints import print_like, print_thread_view_post
+    from src.ingestion.connectors.models._bluesky_prints import print_like, print_thread_view_post
 
     parser = argparse.ArgumentParser(description="BlueSky API Client")
     parser.add_argument("query", type=str, help="Search query string")

@@ -24,7 +24,6 @@ class TwitterBatchProducer(BatchProducer):
         Load the given posts into the database.
         """
         db_connection.add_many(
-            "posts",
             [
                 {
                     "uri": post.get("id"),
@@ -52,13 +51,13 @@ class TwitterBatchProducer(BatchProducer):
     def produce(
         self,
         query: str,
+        utc_since: Optional[datetime],
+        utc_until: Optional[datetime],
         db_connection: DBConnection,
-        utc_since: Optional[datetime] = None,
-        utc_until: Optional[datetime] = None,
         posts_batch_size: int = 100,
     ):
         """
-        Produce data from the BlueSky API using the provided query.
+        Produce data from the Twitter API using the provided query.
         """
         db_connection.connect("posts")
         db_connection.connect("likes")

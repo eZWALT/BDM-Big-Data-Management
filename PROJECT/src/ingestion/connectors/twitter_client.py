@@ -12,6 +12,7 @@ if __name__ == "__main__":
 
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
+from src.ingestion.connectors.models.twitter import *
 from src.utils.config import ConfigManager
 
 # ===-----------------------------------------------------------------------===#
@@ -19,30 +20,6 @@ from src.utils.config import ConfigManager
 #                                                                              #
 # Author: Mateja Zatezalo, Marc Pracerisa                                      #
 # ===-----------------------------------------------------------------------===#
-
-
-class TweetData(TypedDict):
-    class PublicMetrics(TypedDict):
-        retweet_count: int
-        reply_count: int
-        like_count: int
-
-    id: str
-    text: str
-    created_at: str
-    public_metrics: PublicMetrics
-
-
-class MetaData(TypedDict):
-    result_count: int
-    newest_id: str
-    oldest_id: str
-    next_token: Optional[str]
-
-
-class TwitterResponse(TypedDict):
-    data: List[TweetData]
-    meta: MetaData
 
 
 class TwitterAPIClient:
@@ -105,7 +82,7 @@ class TwitterAPIClient:
         response: TwitterResponse = self._request("GET", "tweets/search/recent", params=params)
         posts = response.get("data", [])
         total_posts = len(posts)
-        while limit is not None and total_posts < limit and response.get("meta", {}).get("next_token"):
+        while limit is None or total_posts < limit and response.get("meta", {}).get("next_token"):
             params["token"] = response.get("meta", {}).get("next_token")
             if limit:
                 params["max_results"] = str(limit - total_posts)
