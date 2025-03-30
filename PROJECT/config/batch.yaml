@@ -14,6 +14,15 @@ producers:
         db_type: jsonl-file
         kwargs:
           file: data_lake/landing/temporal/{topic}/posts.jsonl
+  - name: twitter-batch-producer
+    py_object: src.ingestion.batch.twitter_batch:TwitterBatchProducer
+    kwargs:
+      posts_batch_size: 100
+      posts_db:
+        type: db
+        db_type: jsonl-file
+        kwargs:
+          file: data_lake/landing/temporal/{topic}/posts.jsonl
   - name: youtube-batch-producer
     py_object: src.ingestion.batch.youtube_batch:YoutubeBatchProducer
     kwargs:

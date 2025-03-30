@@ -39,12 +39,12 @@ class TwitterBatchProducer(BatchProducer):
 
     def _posts_generator(
         self, query: str, since: Optional[str] = None, until: Optional[str] = None, batch_size: int = 100
-    ) -> Generator[List[models.AppBskyFeedDefs.PostView], None, None]:
-        posts, cursor = self.client.query_posts(q=query, sort="latest", since=since, until=until, limit=batch_size)
+    ) -> Generator[List[TweetData], None, None]:
+        posts, cursor = self.client.fetch_tweets(query=query, since=since, until=until, limit=batch_size)
         yield posts
         while cursor:
-            posts, cursor = self.client.query_posts(
-                q=query, sort="latest", since=since, until=until, limit=batch_size, cursor=cursor
+            posts, cursor = self.client.fetch_tweets(
+                query=query, since=since, until=until, limit=batch_size, cursor=cursor
             )
             yield posts
 
@@ -53,23 +53,22 @@ class TwitterBatchProducer(BatchProducer):
         query: str,
         utc_since: Optional[datetime],
         utc_until: Optional[datetime],
-        db_connection: DBConnection,
         posts_batch_size: int = 100,
+        posts_db: DBConnection = None,
     ):
         """
         Produce data from the Twitter API using the provided query.
         """
-        db_connection.connect("posts")
-        db_connection.connect("likes")
         if utc_since is not None:
-            since = utc_since.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            utc_since = utc_since.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         if utc_until is not None:
-            until = utc_until.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            utc_until = utc_until.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
         total_posts = 0
-        total_likes = 0
-        for post_minibatch in self._posts_generator(query, since=since, until=until, batch_size=posts_batch_size):
-            self._load_posts_to_db(post_minibatch, db_connection)
+        for post_minibatch in self._posts_generator(
+            query, since=utc_since, until=utc_until, batch_size=posts_batch_size
+        ):
+            self._load_posts_to_db(post_minibatch, posts_db)
             total_posts += len(post_minibatch)
 
-        return total_posts + total_likes
+        return total_posts
