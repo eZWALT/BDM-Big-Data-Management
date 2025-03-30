@@ -394,4 +394,8 @@ def _discover_db_connections(kwargs: dict, **placeholder_values: Any) -> dict:
 if __name__ == "__main__":
     # Example usage
     task = BatchProduceTask()
-    task.execute(["water jordan"], utc_since=datetime.now() - timedelta(days=2), utc_until=datetime.now())
+    task.execute(
+        ["water jordan"],
+        utc_since=datetime.now() - timedelta(days=2),
+        utc_until=datetime.now() - timedelta(seconds=11),  # Fucking Twitter API shit (max 17 days, min 10s)
+    )

@@ -72,7 +72,7 @@ class TwitterAPIClient:
             response.raise_for_status()  # Raise an error for bad responses
         except Exception as e:
             try:
-                reason = response.json()
+                reason = response.text
             except Exception:
                 reason = None
             if reason:
