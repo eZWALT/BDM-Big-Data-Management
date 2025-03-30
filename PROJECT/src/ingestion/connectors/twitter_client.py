@@ -68,7 +68,19 @@ class TwitterAPIClient:
             while response.status_code == 429:
                 self._wait_rate_limit(response)
                 response = requests.request(method, url, headers=headers, params=params, json=json)
-        response.raise_for_status()  # Raise an error for bad responses
+        try:
+            response.raise_for_status()  # Raise an error for bad responses
+        except Exception as e:
+            try:
+                reason = response.json()
+            except Exception:
+                reason = None
+            if reason:
+                raise requests.RequestException(
+                    f"Twitter API request failed: {response.status_code} {response.reason} {reason}"
+                ) from e
+            else:
+                raise e
         return response.json()
 
     def fetch_tweets(self, query: str, limit: int = None) -> Tuple[List[TweetData], str]:
