@@ -396,6 +396,7 @@ if __name__ == "__main__":
     task = BatchProduceTask()
     task.execute(
         ["water jordan"],
-        utc_since=datetime.now() - timedelta(days=2),
-        utc_until=datetime.now() - timedelta(seconds=11),  # Fucking Twitter API shit (max 17 days, min 10s)
+        utc_since=datetime.now(tz=timezone.utc) - timedelta(days=2),
+        utc_until=datetime.now(tz=timezone.utc)
+        - timedelta(seconds=11),  # Fucking Twitter API shit (max 17 days, min 10s)
     )
