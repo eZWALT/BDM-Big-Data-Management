@@ -10,3 +10,7 @@ producers:
     kwargs:
       polling_size: 10
       polling_interval: 60
+  - name: bluesky-stream
+    py_object: src.ingestion.stream.bluesky_stream:BlueskyStreamProducer
+    kwargs:
+      jetstream_url: wss://jetstream2.us-east.bsky.network/subscribe

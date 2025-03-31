@@ -1,6 +1,7 @@
 import importlib
 import json
 import time
+import traceback
 from abc import ABC, abstractmethod
 from hashlib import sha256
 from multiprocessing import Process
@@ -61,6 +62,7 @@ class StreamProducer(ABC):
                 raise e
             except Exception as e:
                 logger.warning(f"[{cls_name}] Error in producer for query '{query}': {e}. Restarting...")
+                logger.debug(traceback.format_exc())
                 time.sleep(5)  # Wait before restarting to avoid tight loop
                 continue
             else:
