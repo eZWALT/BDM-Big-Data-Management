@@ -13,7 +13,7 @@ class StreamConsumer(ABC):
     # Actively listen every 10 seconds
     def __init__(self, id: str, polling_timeout: int = 1000):
         self.id = id
-        self.cfg = ConfigManager(config_path="config/streaming.yaml")
+        self.cfg = ConfigManager(config_path="config/stream.yaml")
         self.polling_timeout = polling_timeout
         # We will
         self.read_consumer = KafkaConsumer(

@@ -236,4 +236,4 @@ class KafkaAdmin(KafkaAdminClient):
 if __name__ == "__main__":
     # Example usage
     task = StreamProduceTask()
-    task.execute(["water jordan"])
+    task.execute(["machine"])

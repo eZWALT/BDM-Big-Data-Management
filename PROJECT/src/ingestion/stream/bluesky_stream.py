@@ -49,7 +49,7 @@ class BlueskyStreamProducer(StreamProducer):
         }
 
     async def send_message(self, message: dict):
-        self._producer.send(self._topic, value=message)
+        await self._producer.send(self._topic, value=message)
 
     async def handle_message(self, query: str, message: dict):
         """
@@ -66,6 +66,7 @@ class BlueskyStreamProducer(StreamProducer):
             bootstrap_servers=self._bootstrap_servers,
             value_serializer=(lambda v: json.dumps(v).encode("utf-8")),
         )
+        await self._producer.start()
         async with websockets.connect(jetstream_url) as socket:
             while True:
                 # Receive messages from the websocket
@@ -84,7 +85,7 @@ class BlueskyStreamProducer(StreamProducer):
             # Determine if this post is related to the query
             # and send it to the Kafka topic if it is.
             post_text = message["commit"]["record"]["text"]
-            if query in post_text:
+            if query.lower() in post_text.lower():
                 # By now, the simplest way to determine if the post is related to the query
                 # is to check if the query is in the post text.
                 await self.send_message(message)
