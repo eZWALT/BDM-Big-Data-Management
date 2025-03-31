@@ -110,7 +110,7 @@ PYTHONPATH=. pytest airflow/tests/
 ```
 
 ## TODO
-- [ ] Everybody do their BatchProducerTask (ETL)             (Marc)
+- [x] Everybody do their BatchProducerTask (ETL)             (Marc)
 - [ ] Finalize the streaming (just landing)                  (Marc, Walter)
 - [x] Add functionality to the streamlit (landing zone page) (Walter)
 - [x] Debug & test dynamic dags (Airflow)                    (Walter)

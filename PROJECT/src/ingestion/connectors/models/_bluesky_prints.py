@@ -3,6 +3,12 @@ from typing import Callable, Optional
 from atproto import models
 from atproto_client.models import blob_ref as blob_models
 
+# ===-----------------------------------------------------------------------===#
+# BlueSky API Helper Print Functions                                           #
+#                                                                              #
+# Author: Marc Parcerisa                                                       #
+# ===-----------------------------------------------------------------------===#
+
 
 def _create_print_function(print_fn: Callable[[str], None], prefix: str = ""):
     def _print(x: str):

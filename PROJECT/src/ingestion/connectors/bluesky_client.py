@@ -10,12 +10,13 @@ if __name__ == "__main__":
 
 from src.utils.config import ConfigManager
 
-
 # ===-----------------------------------------------------------------------===#
 # BlueSky API Client                                                           #
 #                                                                              #
 # Author: Marc Parcerisa                                                       #
 # ===-----------------------------------------------------------------------===#
+
+
 class BlueSkyAPIClient(object):
     def __init__(self, email: str = None, password: str = None, base_url: str = None):
         self.config_manager = ConfigManager(config_path="config/api.yaml")
@@ -201,7 +202,7 @@ class BlueSkyAPIClient(object):
 if __name__ == "__main__":
     import argparse
 
-    from _bluesky_prints import print_like, print_thread_view_post
+    from src.ingestion.connectors.models._bluesky_prints import print_like, print_thread_view_post
 
     parser = argparse.ArgumentParser(description="BlueSky API Client")
     parser.add_argument("query", type=str, help="Search query string")

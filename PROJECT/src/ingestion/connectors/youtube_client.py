@@ -1,78 +1,63 @@
-from src.utils.client import APIClient
-import requests
-import time
-import random
-import os
-from typing import *
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
-
-from pathlib import Path
 import json
+import os
+import pprint
+import random
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+from typing import *
 
+import requests
 from loguru import logger
-from pprint import pprint
-from pytubefix import YouTube
-from pytubefix.cli import on_progress
+from pytubefix import Caption, Stream, YouTube
+
+if __name__ == "__main__":
+    import sys
+
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+
+from src.ingestion.connectors.models.youtube import *
+from src.utils.config import ConfigManager
 
 # ===-----------------------------------------------------------------------===#
-# YouTube API Client                                                          #
-#                                                                             #
-# This class provides an interface to interact with the YouTube Data API,     #
-# enabling the retrieval of video metadata, comments, thumbnails, videos,     #
-# and audio. Captions are not available via the API and are retrieved         #
-# using pytubefix.                                                            #
-#                                                                             #
-# The class is structured around:                                             #
-#   - **Retrieve Methods**: Direct API calls to fetch raw data.               #
-#   - **Extract Methods**: High-level wrappers that process, store, and       #
-#     return structured data while generating files as needed.                #
-#                                                                             #
-# Designed for extensibility, this client supports metadata extraction,       #
-# media downloads, and API authentication with exponential backoff for        #
-# robustness.                                                                 #
-#                                                                             #
-# Author: Walter J.T.V                                                        #
+# YouTube API Client                                                           #
+#                                                                              #
+# This class provides an interface to interact with the YouTube Data API,      #
+# enabling the retrieval of video metadata, comments, thumbnails, videos,      #
+# and audio. Captions are not available via the API and are retrieved          #
+# using pytubefix.                                                             #
+#                                                                              #
+# The class is structured around:                                              #
+#   - **Retrieve Methods**: Direct API calls to fetch raw data.                #
+#   - **Extract Methods**: High-level wrappers that process, store, and        #
+#     return structured data while generating files as needed.                 #
+#                                                                              #
+# Designed for extensibility, this client supports metadata extraction,        #
+# media downloads, and API authentication with exponential backoff for         #
+# robustness.                                                                  #
+#                                                                              #
+# Author: Walter J.T.V, Marc Parcerisa                                         #
 # ===-----------------------------------------------------------------------===#
 
 
-class YoutubeAPIClient(APIClient):
+class MaxRetriesError(Exception):
+    """Custom exception for maximum retries exceeded."""
+
+    pass
+
+
+class YoutubeAPIClient:
     def __init__(self):
         super().__init__()
         self.api_name = "youtube"
+        self.config_manager = ConfigManager(config_path="config/api.yaml")
         self.base_url = self.config_manager.get_api_base_url(self.api_name)
         self.authenticate()
-        self.connect()
 
     def authenticate(self):
         self.api_key = self.config_manager.get_api_credentials(self.api_name)["api_key"]
         logger.success("Successfully authenticated to YouTube!")
 
-    def connect(self):
-        logger.success("Successfully connected to YouTube API!")
-
-    def extract(self):
-        return super().extract()
-
-    def parallel_fetch(self, endpoint: str, api_params_list: list, max_retries: int = 2, backoff: int = 2, strict_raise: bool = False):
-        """Fetch data for multiple requests concurrently using ThreadPoolExecutor."""
-        futures = []
-        results = []
-
-        for api_params in api_params_list:
-            future = self.executor.submit(self.fetch, endpoint, api_params, max_retries, backoff, strict_raise)
-            futures.append(future)
-
-        for future in as_completed(futures):
-            try:
-                result = future.result()
-                if result is not None:
-                    results.append(result)
-            except Exception as e:
-                logger.error(f"[Fetch] Error in fetching: {e}")
-        
-        return results
-    
     def fetch(
         self,
         endpoint: str,
@@ -83,137 +68,172 @@ class YoutubeAPIClient(APIClient):
     ) -> dict:
         """General method to fetch data from YouTube API with retry logic."""
         url = f"{self.base_url}{endpoint}"
+        error = Exception("Unknown error")
         for attempt in range(1, max_retries + 1):
             try:
                 response = requests.get(url, params=api_params)
-                if strict_raise or True:
+                if strict_raise:
                     response.raise_for_status()
                 if response.status_code == 200:
                     return response.json()
-                logger.warning(
-                    f"[Fetch] Attempt {attempt}/{max_retries} failed (Status {response.status_code})"
+                error = Exception(
+                    f"[Fetch] API request failed with status code {response.status_code}: {response.text}"
                 )
+                logger.warning(f"[Fetch] Attempt {attempt}/{max_retries} failed (Status {response.status_code})")
                 time.sleep(backoff**attempt)
             except requests.RequestException as e:
-                logger.error(f"[Fetch] API request error: {e}")
-        logger.error(f"[Fetch] API request failed after {max_retries} retries: {url}")
+                error = e
+                raise requests.RequestException(f"[Fetch] API request error: {e}") from e
+        raise MaxRetriesError(
+            f"[Fetch] API request failed after {max_retries} retries for url {url}: {error}"
+        ) from error
 
     def retrieve_videos_basic_data(
-        self, query: str, max_results: int = 10, order: str = "relevance"
-    ):
+        self,
+        query: str,
+        limit: int = 10,
+        cursor: Optional[str] = None,
+        since: Optional[str] = None,
+        until: Optional[str] = None,
+        order: str = "relevance",
+    ) -> Tuple[List[VideoBasicData], Optional[str]]:
         """Fetches basic video metadata from search endpoint"""
-        video_query_params = {
+        params = {
             "part": "snippet",
             "q": query,
             "type": "video",
-            "maxResults": max_results,
+            "maxResults": limit,
             "order": order,
             "videoCaption": "any",
             "videoDuration": "any",
             "key": self.api_key,
         }
+        if cursor:
+            params["pageToken"] = cursor
+        if since:
+            params["publishedAfter"] = since
+        if until:
+            params["publishedBefore"] = until
 
-        data = self.fetch("search", video_query_params)
-        if data is None: 
-            logger.error("The video search returned no video or an error (Like API overloading) has occurred!")
-            return []
-        return [
-            # TODO: SAVE THIS BASIC VIDEO METADATA SCHEMA
+        response: VideoSearchResponse = self.fetch("search", params)
+        posts = response.get("items", [])
+        total_posts = len(posts)
+        while limit is None or total_posts < limit and response.get("nextPageToken"):
+            params["pageToken"] = response.get("nextPageToken")
+            if limit:
+                params["maxResults"] = limit - total_posts
+            response: VideoSearchResponse = self.fetch("search", params)
+            posts.extend(response.get("items", []))
+            total_posts += len(response.get("items", []))
+
+        return list(
             {
                 "title": item["snippet"]["title"],
+                "description": item["snippet"].get("description", ""),
                 "url": f"https://www.youtube.com/watch?v={item['id']['videoId']}",
                 "videoId": item["id"]["videoId"],
                 "channel": item["snippet"]["channelTitle"],
-                "year": item["snippet"]["publishedAt"],
+                "publishedAt": item["snippet"]["publishedAt"],
+                "tags": item["snippet"].get("tags", []),
+                "thumbnail": item["snippet"]["thumbnails"].get("high", {}).get("url", ""),
             }
-            for item in data.get("items", [])
-            if item.get("id", {}).get("videoId") 
+            for item in posts
+        ), response.get("nextPageToken", None)
 
-        ]
-
-    def retrieve_video_statistics(self, video_ids: list):
+    def retrieve_video_statistics(self, video_ids: List[str]) -> dict[str, VideoStatistics]:
         """Fetch additional statistical metadata using videos endpoint"""
-        if not video_ids:
-            return []
-
         params = {
-            "part": "snippet,statistics,contentDetails",
+            "part": "statistics,contentDetails",
             "id": ",".join(video_ids),  # Pass all video IDs as CSV
             "key": self.api_key,
         }
 
-        data = self.fetch("videos", params)
+        response: VideoDetailsResponse = self.fetch("videos", params)
+        items = response.get("items", [])
+        while response.get("nextPageToken"):
+            params["pageToken"] = response.get("nextPageToken")
+            response: VideoDetailsResponse = self.fetch("search", params)
+            items.extend(response.get("items", []))
 
-        # TODO: SAVE THIS DETAILED METADATA SCHEMA
-        metadata = {
+        return {
             item["id"]: {
-                "description": item["snippet"].get("description", ""),
-                "tags": item["snippet"].get("tags", []),
                 "viewCount": int(item["statistics"].get("viewCount", 0)),
                 "likeCount": int(item["statistics"].get("likeCount", 0)),
                 "commentCount": int(item["statistics"].get("commentCount", 0)),
                 "duration": item["contentDetails"]["duration"],
                 "definition": item["contentDetails"]["definition"],
-                "thumbnails": item["snippet"]["thumbnails"]
-                .get("high", {})
-                .get("url", ""),
             }
-            for item in data.get("items", [])
+            for item in items
         }
-        return metadata
 
-    def retrieve_top_level_comments(self, video_id: str, max_results: int = 10, order: str = "relevance"):
+    def retrieve_top_level_comments(
+        self, video_id: str, limit: Optional[int] = 10, cursor: Optional[str] = None, order: str = "relevance"
+    ) -> Tuple[List[VideoComment], Optional[str]]:
         """Fetches top-level comments for a video."""
         api_params = {
             "part": "snippet",
             "videoId": video_id,
-            "maxResults": max_results,
             "key": self.api_key,
             "order": order,
         }
+        if limit:
+            api_params["maxResults"] = limit
+        if cursor:
+            api_params["pageToken"] = cursor
 
-        try:
+        response: CommentThreadResponse = self.fetch("commentThreads", api_params, strict_raise=False)
+        items = response.get("items", [])
+        total_items = len(items)
+        while limit is None or total_items < limit and response.get("nextPageToken"):
+            api_params["pageToken"] = response.get("nextPageToken")
+            if limit:
+                api_params["maxResults"] = limit - total_items
+            response: CommentThreadResponse = self.fetch("commentThreads", api_params, strict_raise=False)
+            items.extend(response.get("items", []))
+            total_items += len(response.get("items", []))
 
-            data = self.fetch("commentThreads", api_params, strict_raise=False)
-            # In the case no comments are found / disabled
-            if not data:
-                logger.warning(f"No comments found for video {video_id}.")
-                return []
-            # TODO: SAVE THIS COMMENT SCHEMA
-            comments = [
-                {
-                    "channel_name": item["snippet"]["topLevelComment"]["snippet"][
-                        "authorDisplayName"
-                    ],
-                    "channel_id": item["snippet"]["topLevelComment"]["snippet"]
-                    .get("authorChannelId", {})
-                    .get("value", "Unknown"),
-                    "comment": item["snippet"]["topLevelComment"]["snippet"][
-                        "textDisplay"
-                    ],
-                    "likes": item["snippet"]["topLevelComment"]["snippet"].get(
-                        "likeCount", 0
-                    ),
-                    "replies": item["snippet"].get("totalReplyCount", 0),
-                    "published_at": item["snippet"]["topLevelComment"]["snippet"].get(
-                        "publishedAt", "Unknown"
-                    ),
-                }
-                for item in data.get("items", [])
-            ]
+        return list(
+            {
+                "channelName": item["snippet"]["topLevelComment"]["snippet"]["authorDisplayName"],
+                "channelId": item["snippet"]["topLevelComment"]["snippet"]
+                .get("authorChannelId", {})
+                .get("value", "Unknown"),
+                "comment": item["snippet"]["topLevelComment"]["snippet"]["textDisplay"],
+                "likes": item["snippet"]["topLevelComment"]["snippet"].get("likeCount", 0),
+                "replies": item["snippet"].get("totalReplyCount", 0),
+                "publishedAt": item["snippet"]["topLevelComment"]["snippet"].get("publishedAt", "Unknown"),
+                "videoId": video_id,
+            }
+            for item in items
+        ), response.get("nextPageToken", None)
 
-            if not comments:
-                logger.warning(f"No top-level comments found for video {video_id}")
-            return comments
+    def get_audio_stream(self, video_id: str) -> Stream:
+        """Retrieve the audio stream for a given video ID."""
+        yt = YouTube(f"https://www.youtube.com/watch?v={video_id}")
+        ys = yt.streams.get_audio_only()
+        return ys
 
-        except requests.RequestException as e:
-            logger.error(f"Error fetching comments for video {video_id}: {e}")
-            return []
+    def get_video_stream(self, video_id: str) -> Stream:
+        """Retrieve the video stream for a given video ID."""
+        yt = YouTube(f"https://www.youtube.com/watch?v={video_id}")
+        ys = yt.streams.get_highest_resolution()
+        return ys
+
+    def get_caption_stream(self, video_id: str) -> Caption:
+        yt = YouTube(f"https://www.youtube.com/watch?v={video_id}")
+        captions = {caption.code: caption for caption in yt.captions}
+        en_caption = captions.get("a.en") or next(
+            (caption for code, caption in captions.items() if code.startswith("en")),
+            None,
+        )
+        if not en_caption:
+            raise ValueError(f"No English captions available for video {video_id}")
+        return en_caption
+
+    # ------------------------------------------------------------------------------------------------------------------
 
     # These 3 retrieval methods work with pytube scrapping rather than the youtube API
-    def retry_pytubefix_operation(
-        self, operation, *args, max_retries=3, backoff=2, **kwargs
-    ):
+    def retry_pytubefix_operation(self, operation, *args, max_retries=3, backoff=2, **kwargs):
         """Helper method to retry pytubefix operations with exponential backoff."""
         retry_count = 0
         while retry_count < max_retries:
@@ -221,70 +241,35 @@ class YoutubeAPIClient(APIClient):
                 return operation(*args, **kwargs)
             except Exception as e:
                 retry_count += 1
-                logger.warning(
-                    f"Operation failed (Attempt {retry_count}/{max_retries}): {e}"
-                )
+                logger.warning(f"Operation failed (Attempt {retry_count}/{max_retries}): {e}")
                 if retry_count >= max_retries:
                     logger.error(f"Operation failed after {max_retries} retries.")
                     raise e
-                sleep_time = backoff**retry_count + random.uniform(
-                    0, 1
-                )  # Exponential backoff with jitter
+                sleep_time = backoff**retry_count + random.uniform(0, 1)  # Exponential backoff with jitter
                 logger.info(f"Retrying in {sleep_time:.2f} seconds...")
                 time.sleep(sleep_time)
 
-    def retrieve_audio(self, video_id: str, output_folder: str) -> str:
+    def extract_audio(self, video_id: str, output_folder: str) -> str:
         """Retrieve audio from a YouTube video in m4a format."""
-        try:
-            yt = YouTube(f"https://www.youtube.com/watch?v={video_id}")
-            ys = yt.streams.get_audio_only()
-            path = self.retry_pytubefix_operation(
-                ys.download, filename=f"{video_id}.mp3", output_path=output_folder
-            )
-            logger.success(f"Successfully downloaded audio for video {video_id}")
-            return path
-        except Exception as e:
-            logger.error(f"Failed to download audio for {video_id}: {e}")
-            return None
+        ys = self.get_audio_stream(video_id)
+        path = self.retry_pytubefix_operation(ys.download, filename=f"{video_id}.mp3", output_path=output_folder)
+        return path
 
-    def retrieve_video(self, video_id: str, output_folder: str) -> str:
+    def extract_video(self, video_id: str, output_folder: str) -> str:
         """Retrieve a YouTube video with the highest resolution available."""
-        try:
-            yt = YouTube(f"https://www.youtube.com/watch?v={video_id}")
-            ys = yt.streams.get_highest_resolution()
-            path = self.retry_pytubefix_operation(
-                ys.download, filename=f"{video_id}.mp4", output_path=output_folder
-            )
-            logger.success(f"Successfully downloaded video for video {video_id}")
-            return path
-        except Exception as e:
-            logger.error(f"Failed to download video for {video_id}: {e}")
-            return None
+        ys = self.get_video_stream(video_id)
+        path = self.retry_pytubefix_operation(ys.download, filename=f"{video_id}.mp4", output_path=output_folder)
+        return path
 
-    def retrieve_caption(self, video_id: str, output_folder: str):
+    def extract_captions(self, video_id: str, output_folder: str):
         """Retrieve and download English captions from a YouTube video."""
         try:
-            yt = YouTube(f"https://www.youtube.com/watch?v={video_id}")
-            captions = {caption.code: caption for caption in yt.captions}
-            en_caption = captions.get("a.en") or next(
-                (
-                    caption
-                    for code, caption in captions.items()
-                    if code.startswith("en")
-                ),
-                None,
-            )
-
-            if en_caption:
-                path = self.retry_pytubefix_operation(
-                    en_caption.download, title=video_id, output_path=output_folder
-                )
-                logger.success(f"Successfully downloaded captions for video {video_id}")
-                return path
-            else:
-                logger.warning(f"No English captions available for video {video_id}")
-        except Exception as e:
-            logger.error(f"Failed to retrieve captions for video {video_id}: {e}")
+            en_caption = self.get_caption_stream(video_id)
+        except ValueError as e:
+            logger.warning(f"No captions available for video {video_id}: {e}")
+            return None
+        path = self.retry_pytubefix_operation(en_caption.download, title=video_id, output_path=output_folder)
+        return path
 
     def extract_videos(
         self,
@@ -292,13 +277,13 @@ class YoutubeAPIClient(APIClient):
         max_results: int = 10,
         output_folder: str = "videos_metadata",
         save: bool = False,
-        order: str = "relevance"
+        order: str = "relevance",
     ):
         """Retrieve videos metadata, merge statistics, and save each video as a separate JSON file."""
         output_path = Path(output_folder)
         output_path.mkdir(parents=True, exist_ok=True)
 
-        videos = self.retrieve_videos_basic_data(query, max_results, order)
+        videos, _ = self.retrieve_videos_basic_data(query, limit=max_results, order=order)
         video_ids = [video["videoId"] for video in videos]
         metadata = self.retrieve_video_statistics(video_ids)
 
@@ -306,9 +291,7 @@ class YoutubeAPIClient(APIClient):
             video.update(metadata.get(video["videoId"], {}))
             if save:
                 file_path = output_path / f"{video['videoId']}.json"
-                file_path.write_text(
-                    json.dumps(video, indent=4, ensure_ascii=False), encoding="utf-8"
-                )
+                file_path.write_text(json.dumps(video, indent=4, ensure_ascii=False), encoding="utf-8")
                 logger.success(f"[Metadata] Saved video metadata: {file_path}")
 
         return videos
@@ -319,28 +302,22 @@ class YoutubeAPIClient(APIClient):
         max_comments: int = 10,
         output_folder: str = "comments",
         save: bool = False,
-        order: str = "relevance"
+        order: str = "relevance",
     ):
         """Extracts comments from a given list of video metadata and saves them as JSON."""
         output_path = Path(output_folder)
         output_path.mkdir(parents=True, exist_ok=True)
 
         results = {
-            video["videoId"]: self.retrieve_top_level_comments(
-                video["videoId"], max_comments, order
-            )
+            video["videoId"]: self.retrieve_top_level_comments(video["videoId"], max_comments, order=order)[0]
             for video in videos
         }
 
         if save:
             for video_id, comments in results.items():
                 file_path = output_path / f"{video_id}.json"
-                file_path.write_text(
-                    json.dumps(comments, indent=4, ensure_ascii=False), encoding="utf-8"
-                )
-                logger.success(
-                    f"[Comments] Saved {len(comments)} comments for {video_id}: {file_path}"
-                )
+                file_path.write_text(json.dumps(comments, indent=4, ensure_ascii=False), encoding="utf-8")
+                logger.success(f"[Comments] Saved {len(comments)} comments for {video_id}: {file_path}")
 
         return results
 
@@ -349,12 +326,12 @@ class YoutubeAPIClient(APIClient):
         output_path = Path(output_folder)
         output_path.mkdir(parents=True, exist_ok=True)
 
-        results = []  
+        results = []
         with ThreadPoolExecutor() as executor:
             futures = []
             for video in videos:
                 video_id = video["videoId"]
-                thumbnail_url = video["thumbnails"]
+                thumbnail_url = video["thumbnail"]
                 if thumbnail_url:
                     futures.append(executor.submit(self.download_image, thumbnail_url, output_path / f"{video_id}.jpg"))
 
@@ -385,7 +362,7 @@ class YoutubeAPIClient(APIClient):
         captions = {}
         for video in videos:
             video_id = video["videoId"]
-            caption_path = self.retrieve_caption(video_id, output_path)
+            caption_path = self.extract_captions(video_id, output_path)
             if caption_path:
                 captions[video_id] = caption_path
                 logger.success(f"[Captions] Saved captions for {video_id}")
@@ -394,26 +371,27 @@ class YoutubeAPIClient(APIClient):
 
         return captions  # Only includes videos with successfully extracted captions
 
-
     def extract_audio_from_videos(self, videos: List[dict], output_folder="audios"):
         """Extracts audio from YouTube videos concurrently."""
         output_path = Path(output_folder)
         output_path.mkdir(parents=True, exist_ok=True)
-        results = [] 
+        results = []
 
         with ThreadPoolExecutor() as executor:
             futures = []
             for video in videos:
                 video_id = video["videoId"]
-                futures.append(executor.submit(self.retrieve_audio, video_id, output_path))
+                futures.append(executor.submit(self.extract_audio, video_id, output_path))
 
             for future in as_completed(futures):
                 result = future.result()  # Wait for the result
                 if result:
-                    results.append({
-                        "video_id": video_id,
-                        "audio_path": result,
-                    })
+                    results.append(
+                        {
+                            "video_id": video_id,
+                            "audio_path": result,
+                        }
+                    )
                     logger.success(f"[Audio] Saved audio for {video_id}")
 
         return results
@@ -422,29 +400,32 @@ class YoutubeAPIClient(APIClient):
         """Extracts video with a specific format and resolution from YouTube concurrently."""
         output_path = Path(output_folder)
         output_path.mkdir(parents=True, exist_ok=True)
-        results = [] 
+        results = []
 
         with ThreadPoolExecutor() as executor:
             futures = []
             for video in videos:
                 video_id = video["videoId"]
-                futures.append(executor.submit(self.retrieve_video, video_id, output_path))
+                futures.append(executor.submit(self.extract_video, video_id, output_path))
 
             for future in as_completed(futures):
                 result = future.result()  # Wait for the result
                 if result:
-                    results.append({
-                        "video_id": video_id,
-                        "video_path": result,
-                    })
+                    results.append(
+                        {
+                            "video_id": video_id,
+                            "video_path": result,
+                        }
+                    )
                     logger.success(f"[Video] Saved video for {video_id}")
 
         return results
 
+
 # There are 2 order methods: "relevance" and "time"/"date"
 # basic usage of this Youtube API class :)
 if __name__ == "__main__":
-    yt_ingestor = YoutubeAPIClient()
+    client = YoutubeAPIClient()
 
     # Define base output directory
     base_output = Path("resources/tests")
@@ -463,34 +444,23 @@ if __name__ == "__main__":
         path.mkdir(parents=True, exist_ok=True)
 
     # Retrieve videos metadata
-    videos = yt_ingestor.extract_videos(
-        query="Chill Guy",
-        max_results=3,
-        output_folder=str(paths["metadata"]),
-        order="date"
+    videos = client.extract_videos(
+        query="Machine Learning", max_results=3, output_folder=str(paths["metadata"]), order="relevance"
     )
 
     # Extract comments
-    comment_data = yt_ingestor.extract_comments_from_videos(
+    comment_data = client.extract_comments_from_videos(
         videos, max_comments=10, output_folder=str(paths["comments"]), order="time"
     )
 
     # Download thumbnails
-    thumbnail_data = yt_ingestor.extract_video_thumbnails(
-        videos, output_folder=str(paths["thumbnails"])
-    )
+    thumbnail_data = client.extract_video_thumbnails(videos, output_folder=str(paths["thumbnails"]))
 
     # Extract audio files
-    audio_data = yt_ingestor.extract_audio_from_videos(
-        videos, output_folder=str(paths["audios"])
-    )
+    audio_data = client.extract_audio_from_videos(videos, output_folder=str(paths["audios"]))
 
     # Download videos
-    video_data = yt_ingestor.extract_video_from_videos(
-        videos, output_folder=str(paths["videos"])
-    )
+    video_data = client.extract_video_from_videos(videos, output_folder=str(paths["videos"]))
 
     # Download captions
-    caption_data = yt_ingestor.extract_captions_from_videos(
-        videos, output_folder=str(paths["captions"])
-    )
+    caption_data = client.extract_captions_from_videos(videos, output_folder=str(paths["captions"]))
