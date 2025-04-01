@@ -36,6 +36,11 @@ class YoutubeStreamProducer(StreamProducer):
             posts, cursor = self.client.retrieve_videos_basic_data(query=query, limit=1, order="date")  # Newest video
             if posts:
                 self._newest_video_id = posts[0]["videoId"]
+                logger.debug(
+                    f"[YOUTUBE STREAM PRODUCER] Updated polling cursor for query '{query}' to '{self._newest_video_id}'."
+                )
+            else:
+                logger.warning(f"[YOUTUBE STREAM PRODUCER] Could not update polling cursor for query '{query}'.")
             return []  # Don't return the first video, just set the ID, we'll return the next videos that are published
         else:
             # If a video ID is set, poll for new videos, and compare with the last one
@@ -55,6 +60,11 @@ class YoutubeStreamProducer(StreamProducer):
 
             if result:
                 self._newest_video_id = result[0]["videoId"]
+                logger.debug(
+                    f"[YOUTUBE STREAM PRODUCER] Updated polling cursor for query '{query}' to '{self._newest_video_id}'."
+                )
+            else:
+                logger.debug(f"[YOUTUBE STREAM PRODUCER] No new videos for query '{query}'.")
             return result
 
     def _fetch_and_update_video_stats(self, videos: List[VideoBasicData]):
@@ -87,6 +97,4 @@ class YoutubeStreamProducer(StreamProducer):
                 self._fetch_and_update_video_captions(videos)
                 for video in videos:
                     self.send_message(video)
-            else:
-                logger.debug(f"No new videos found for query '{query}'.")
             time.sleep(polling_interval)
