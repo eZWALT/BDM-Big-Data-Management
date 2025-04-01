@@ -60,6 +60,7 @@ class YoutubeStreamProducer(StreamProducer):
 
             if result:
                 self._newest_video_id = result[0]["videoId"]
+                logger.debug(f"[YOUTUBE STREAM PRODUCER] Found {len(result)} new videos for query '{query}'.")
                 logger.debug(
                     f"[YOUTUBE STREAM PRODUCER] Updated polling cursor for query '{query}' to '{self._newest_video_id}'."
                 )
