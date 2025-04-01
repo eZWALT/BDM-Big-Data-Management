@@ -43,6 +43,7 @@ In order to fully utilize this project, there is several software and access to 
 - Docker Compose                   (Mandatory) 
 - Java (To execute spark locally)  (Optional) --> aditionally create a HOST_IP environment variable with your IPv4
 - Python 3.11 (To execute locally) (Optional)
+- Set up a .env file inside both the airflow directory and main project directory (API KEYS)
 
 Note: To execute pyspark on the driver node (your pc/laptop) you will need to install java and set the java_home environment variable and have python 3.11
 
@@ -62,27 +63,6 @@ The basic structure of this docker compose server is the following, bearing in m
 5. Spark Master: 1 master
 6. Spark Workers: up to N workers
 7. Streamlit frontend
-
-Also one can find environment variables defined inside `environment` tag,  `command` and `entrypoint`defines the entrypoint command or actions to perform, `volume` indicates which storage volume is using (storage volumes reside inside the host device)
-
-To make use of this set-up extensively we recommend using the following commands to check and inspectthe state of the applications:
-
-```sh
-docker-compose ps / top
-docker-compose logs -f <service>
-docker-compose exec <service_name> <command>
-docker-compose config
-docker-compose port <service_name> <container_port>
-docker-compose events
-```
-
-In order to make use of front-end to visualize and inspect the data management pipeline, filesystem and dashboards run the docker image or locally run streamlit
-
-```sh
-
-streamlit run src/frontend/home.py
-xdg-open http://localhost:8501  # Open the browser in Ubuntu
-```
 
 ### Social Media API's
 
@@ -109,17 +89,26 @@ Notice that also DAG tests can be found in `airflow/tests` in order to verify th
 PYTHONPATH=. pytest airflow/tests/
 ```
 
-## TODO
+## TODO 
+For the 1st part of the project, the following tasks must be completed:
+
 - [x] Everybody do their BatchProducerTask (ETL)             (Marc)
-- [ ] Finalize the streaming (just landing)                  (Marc, Walter)
+- [x] Finalize the streaming (just landing)                  (Marc, Walter)
 - [x] Add functionality to the streamlit (landing zone page) (Walter)
 - [x] Debug & test dynamic dags (Airflow)                    (Walter)
-- [ ] Test Docker compose (Everything tighted up)            (Marc, Mateja)
+- [x] Test Docker compose (Everything tighted up)            (Marc, Mateja)
 - [ ] Get delta table folder working                         (Mateja)
 - [ ] Automatize delta lake (dag) and put it in docker?      (Mateja, Walter)
 - [ ] Writing the final report                               (Mateja, Marc, Walter)
-      
 
+For the 2nd part of the project, the following tasks must be completed:
+
+- [ ] TRUSTED ZONE 
+- [ ] Create Streaming Explotitation zone
+- [ ] Ideate 2 Small Easy Exploitation tasks
+- [ ] Update the frontend accordingly
+- [ ] Update the airflow dags accordingly 
+ 
 ## Credits
 
 - Walter J. Troiani 

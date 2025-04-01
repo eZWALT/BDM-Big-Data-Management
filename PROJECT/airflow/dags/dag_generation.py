@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import List, Optional, Dict
 from datetime import datetime, timedelta, date, timezone
 import logging
 from airflow import DAG
@@ -7,8 +7,9 @@ from dataclasses import dataclass
 from airflow.operators.python import PythonOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.decorators import dag, task
-from src.utils.company import deserialize_companies_from_json, Company, Product
 
+from src.utils.company import deserialize_companies_from_json, Company, Product
+from src.ingestion.batch import BatchProduceTask
 # ===----------------------------------------------------------------------===#
 # DAG Configuration Dataclass                                                 #
 # ===----------------------------------------------------------------------===#
@@ -70,7 +71,18 @@ def create_dummy_test_dag(config: DAGConfig):
     
     return dag
 
-# BIG TODO: Fix extra arguments and end this dag
+# Wrapper BatchProduceTask call with default parameters
+def batch_produce_task(
+    queries: List[str],
+    utc_since: Optional[datetime] = datetime.now(tz=timezone.utc) - timedelta(days=2),
+    utc_until: Optional[datetime] = datetime.now(tz=timezone.utc) - timedelta(seconds=11)) -> None:
+    task = BatchProduceTask()
+    task.exeucte(
+        queries=queries,
+        utc_since=utc_since,
+        utc_until=utc_until
+    )
+# BIG TODO: Fix extra arguments and end this dag and add flexibility to ingestion (now time ranges are frozen)
 def create_batch_product_tracking_dag(config: DAGConfig):
     """Creates a batch tracking DAG dynamically."""
     dag = DAG(
@@ -84,12 +96,18 @@ def create_batch_product_tracking_dag(config: DAGConfig):
     with dag:
         ingestion_task = PythonOperator(
             task_id="batch_ingestion",
-            python_callable=lambda: logging.info(f"Ingesting data for {config.company.company_id} - {config.product.name}"),
+            python_callable=batch_produce_task(queries=config.product.keywords +  [config.product.name])
         )
 
+        # TODO: End this Landing task and remove this placeholder :)
         landingzone_store_task = PythonOperator(
             task_id="landingzone_store",
-            python_callable=lambda: logging.info(f"Storing data in landing zone for {config.company.company_id} - {config.product.name}"),
+            python_callable=lambda: logging.info(
+                f"Starting data storage for company {config.company.company_id} "
+                f"and product {config.product.name}. "
+                f"Product details: Keywords = {config.product.keywords}, "
+                f"Task started at {datetime.now().strftime('%H:%M:%S')}."
+            ),
         )
         
         ingestion_task >> landingzone_store_task
@@ -99,7 +117,7 @@ def create_batch_product_tracking_dag(config: DAGConfig):
 # DAG Generation from JSON                                                    #
 # ===----------------------------------------------------------------------===#
 
-def generate_dynamic_dags_from_serialized_companies(data_path: str, is_test: bool = True):
+def generate_dynamic_dags_from_serialized_companies(data_path: str, is_test: bool = False):
     companies = deserialize_companies_from_json(data_path)
     for company in companies:
         for i, product in enumerate(company.products):
