@@ -82,7 +82,6 @@ class DBConnectionConfig(TypedDict):
 
 
 class ProducerConfig(TypedDict):
-
     name: str
     py_object: str
     kwargs: Optional[dict]
@@ -139,9 +138,6 @@ class BatchProduceTask(Task):
         return f"{producer_name}-{query_hash}-{since_str}-{until_str}"
 
     def execute(self, queries: List[str], utc_since: Optional[datetime] = None, utc_until: Optional[datetime] = None):
-        self.task_status = TaskStatus.IN_PROGRESS
-
-        start = time.time()
         processes: List[Thread] = []
         for name, (producer, kwargs) in self.batch_producers.items():
             for query in queries:
@@ -152,6 +148,7 @@ class BatchProduceTask(Task):
                     args=(query, utc_since, utc_until),
                     kwargs=_discover_db_connections(kwargs, topic=topic),
                     name=topic,
+                    daemon=True,
                 )
                 process.start()
                 processes.append(process)
@@ -159,9 +156,6 @@ class BatchProduceTask(Task):
         # Wait for all threads to finish
         for thread in processes:
             thread.join()
-
-        logger.info(f"[BATCH PRODUCER TASK] Batch producer finished. Total time: {time.time() - start:.2f} seconds")
-        self.task_status = TaskStatus.COMPLETED
 
 
 class DBConnection(ABC):
