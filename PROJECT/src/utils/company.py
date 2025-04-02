@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timedelta
 import pprint
 import re
+from loguru import logger
 # ===----------------------------------------------------------------------===#
 # Company Related Information                                                 #
 #                                                                             #
@@ -218,15 +219,16 @@ def serialize_companies_to_json(companies: List[Company], json_path: str):
     try:
         with open(json_path, "w") as file:
             json.dump([company.to_dict() for company in companies], file, indent=4)
-        print(f"Companies successfully saved to {json_path}")
+        logger.success(f"Companies successfully saved to {json_path}")
     except Exception as e:
-        print(f"Error saving to JSON file: {e}")
+        logger.error(f"Error saving to JSON file: {e}")
 
 
-if __name__ == "__main__":
-    # Parse companies from the input JSON
-    companies = deserialize_companies_from_json("src/orchestration/companies.json")
-    for company in companies: 
-        pprint.pprint(company.to_dict(), indent=2)
-    # Dump companies back into a new JSON file
-    serialize_companies_to_json(companies, "src/orchestration/juanmiguel.json")
+# Just a simple main to showcase functionalities
+# if __name__ == "__main__":
+#     # Parse companies from the input JSON
+#     companies = deserialize_companies_from_json("airflow/dags/companies.json")
+#     for company in companies: 
+#         pprint.pprint(company.to_dict(), indent=2)
+#     # Dump companies back into a new JSON file
+#     serialize_companies_to_json(companies, "airflow/dags/juanmiguel.json")

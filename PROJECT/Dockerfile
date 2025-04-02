@@ -3,14 +3,13 @@ FROM python:3.11-slim
 
 # Setup the application directory structure and copy relevant files
 WORKDIR /app 
-COPY resources resources
-COPY src/frontend/requirements.txt . 
+COPY frontend/requirements.txt . 
 
 # Install dependencies
 RUN pip3 install --break-system-packages -r requirements.txt
 
 # Copy streamlit application files and expose port 9999
-COPY src/frontend .  
+COPY frontend .  
 EXPOSE 9999
 
 CMD ["streamlit", "run", "home.py", "--server.port=9999", "--server.address=0.0.0.0"]

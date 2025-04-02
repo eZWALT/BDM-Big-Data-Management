@@ -10,6 +10,17 @@ from airflow.decorators import dag, task
 
 from src.utils.company import deserialize_companies_from_json, Company, Product
 from src.ingestion.batch import BatchProduceTask
+
+# ===----------------------------------------------------------------------===#
+# Automatic USE-CASE DAG Generation                                           #
+#                                                                             #
+# This script automatically parses the list of companies from a JSON file     #
+# and navigates through all these companies' products (use-cases) to          #
+# automatically generate all batch jobs with their specified configuration.   #  
+#                                                                             #
+# Author: Walter J.T.V                                                        #          
+# ===----------------------------------------------------------------------===#
+
 # ===----------------------------------------------------------------------===#
 # DAG Configuration Dataclass                                                 #
 # ===----------------------------------------------------------------------===#
@@ -23,14 +34,6 @@ class DAGConfig:
     extra_args: dict
     company: Company
     product: Product 
-
-# ===----------------------------------------------------------------------===#
-# Automatic USE-CASE DAG Generation                                           #
-#                                                                             #
-# This script automatically parses the list of companies from a JSON file     #
-# and navigates through all these companies' products (use-cases) to          #
-# automatically generate all batch jobs with their specified configuration.   #            
-# ===----------------------------------------------------------------------===#
 
 def get_airflow_args(company, product):
     """Extracts all Airflow DAG arguments from a product configuration."""
@@ -77,11 +80,12 @@ def batch_produce_task(
     utc_since: Optional[datetime] = datetime.now(tz=timezone.utc) - timedelta(days=2),
     utc_until: Optional[datetime] = datetime.now(tz=timezone.utc) - timedelta(seconds=11)) -> None:
     task = BatchProduceTask()
-    task.exeucte(
+    task.execute(
         queries=queries,
         utc_since=utc_since,
         utc_until=utc_until
     )
+    
 # BIG TODO: Fix extra arguments and end this dag and add flexibility to ingestion (now time ranges are frozen)
 def create_batch_product_tracking_dag(config: DAGConfig):
     """Creates a batch tracking DAG dynamically."""
@@ -96,7 +100,10 @@ def create_batch_product_tracking_dag(config: DAGConfig):
     with dag:
         ingestion_task = PythonOperator(
             task_id="batch_ingestion",
-            python_callable=batch_produce_task(queries=config.product.keywords +  [config.product.name])
+            python_callable=batch_produce_task,
+            op_args={ # Keyword arguments
+                'queries': config.product.keywords + [config.product.name],  
+            }
         )
 
         # TODO: End this Landing task and remove this placeholder :)
@@ -139,4 +146,5 @@ def generate_dynamic_dags_from_serialized_companies(data_path: str, is_test: boo
             logging.info(f"DAG created for {company.company_id} - {product.name} with dag_id: {dag_id}")
 
 # Trigger the DAG generation (Relative path inside the docker container)
-generate_dynamic_dags_from_serialized_companies("dags/companies.json", is_test=True)
+generate_dynamic_dags_from_serialized_companies("dags/companies.json", is_test=False)
+

@@ -119,7 +119,7 @@ def _load_stream_producer(py_object: str) -> Type[StreamProducer]:
 class StreamProduceTask(Task):
     def __init__(self):
         super().__init__()
-        self.config = ConfigManager("config/stream.yaml")
+        self.config = ConfigManager("configuration/stream.yaml")
         self.producer_configs: List[ProducerConfig] = self.config._load_config()["producers"]
         self.stream_producers: Dict[str, Tuple[Type[StreamProducer], dict]] = {}
 

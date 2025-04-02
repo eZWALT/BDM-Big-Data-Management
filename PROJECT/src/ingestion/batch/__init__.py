@@ -103,7 +103,7 @@ def _load_batch_producer(py_object: str) -> Type[BatchProducer]:
 class BatchProduceTask(Task):
     def __init__(self):
         super().__init__()
-        self.config = ConfigManager("config/batch.yaml")
+        self.config = ConfigManager("configuration/batch.yaml")
         self.producer_configs: List[ProducerConfig] = self.config._load_config()["producers"]
         self.batch_producers: Dict[str, Tuple[Type[BatchProducer], dict]] = {}
 

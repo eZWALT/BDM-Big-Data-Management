@@ -6,12 +6,15 @@ VibeRadar provides real-time and historical long-term analysis of product impres
 
 ## Contents
 
-- **docker-compose.yaml**: Contains the whole software set-up and configuration of the different needed processes.
-- **.github/workflows/**: CI/CD configuration files
-- **config/**: configuration files 
-- **data/**: persistent data 
-- **resources/**: images, audios or other miscellaneous resources
-- **src/**: main source code of the project divided into 4 high level zones (Ingestion, Landing, Trusted, Exploitation)
+- **docker-compose.yaml**: Contains the whole software set-up and configuration of the different needed processes. (Split into 3 YAML docker compose files). There is a custom dockerfile for setting up the Python-Streamlit image for the frontend
+- **requirements.txt**: Python main base requirements 
+- **airflow/**: Airflow related contents and scripts with automatic dag generation
+- **configuration/**: Configuration files for all the project 
+- **data_lake/**: Persistent data target directory to set up the local data lake 
+- **frontend/**: Streamlit front-end for the project data management and analytics/dashboarding
+- **spark/**: Spark related configurations, scripts and other (WIP)
+- **src/**: Main source code of the project divided into 4 high level zones (Ingestion, Landing, Trusted, Exploitation)
+- **tests/**: Unit tests of the source code to sanity check the project
 
 
 ## Architectural desing & tech stack
@@ -41,9 +44,9 @@ WIP
 In order to fully utilize this project, there is several software and access to private apis you will need, as described in the following sections. To guarantee the ease of execution/portability of this project you will need:
 
 - Docker Compose                   (Mandatory) 
+- Set up a .env file / environment variables (API keys and information, Airflow authentification (use defualt values airflow/airflow))(Mandatory)
 - Java (To execute spark locally)  (Optional) --> aditionally create a HOST_IP environment variable with your IPv4
 - Python 3.11 (To execute locally) (Optional)
-- Set up a .env file inside both the airflow directory and main project directory (API KEYS)
 
 Note: To execute pyspark on the driver node (your pc/laptop) you will need to install java and set the java_home environment variable and have python 3.11
 
@@ -100,6 +103,9 @@ For the 1st part of the project, the following tasks must be completed:
 - [ ] Get delta table folder working                         (Mateja)
 - [ ] Automatize delta lake (dag) and put it in docker?      (Mateja, Walter)
 - [ ] Writing the final report                               (Mateja, Marc, Walter)
+- [ ] Fixing relative paths in airflow (data_lake)           (Walter)
+- [ ] Rewrite codebase to avoid throwing exceptions
+
 
 For the 2nd part of the project, the following tasks must be completed:
 

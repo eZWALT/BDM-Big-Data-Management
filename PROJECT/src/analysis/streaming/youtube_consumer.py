@@ -20,7 +20,7 @@ class YoutubeConsumer(StreamConsumer):
 
 
 if __name__ == "__main__":
-    config = ConfigManager(config_path="config/stream.yaml")
+    config = ConfigManager(config_path="configuration/stream.yaml")
     bootstrap_servers = config._load_config()["kafka"]["bootstrap_servers"]
     admin = KafkaAdminClient(bootstrap_servers=bootstrap_servers)
     topics = admin.list_topics()

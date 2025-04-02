@@ -50,7 +50,7 @@ class YoutubeAPIClient:
     def __init__(self):
         super().__init__()
         self.api_name = "youtube"
-        self.config_manager = ConfigManager(config_path="config/api.yaml")
+        self.config_manager = ConfigManager(config_path="configuration/api.yaml")
         self.base_url = self.config_manager.get_api_base_url(self.api_name)
         self.authenticate()
 

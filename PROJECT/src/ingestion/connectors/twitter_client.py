@@ -24,7 +24,7 @@ from src.utils.config import ConfigManager
 
 class TwitterAPIClient:
     def __init__(self, api_key: str = None, base_url: str = None):
-        self.config_manager = ConfigManager(config_path="config/api.yaml")
+        self.config_manager = ConfigManager(config_path="configuration/api.yaml")
         if not api_key:
             credentials = self.config_manager.get_api_credentials("twitter")
             self.bearer_token = api_key or credentials.get("api_key")
@@ -53,7 +53,8 @@ class TwitterAPIClient:
                 time.sleep(sleep_time)
 
     def _request(
-        self, method: str, endpoint: str, params: dict = None, json: dict = None, handle_rate_limit: bool = True
+        self, method: str, endpoint: str, params: dict = None, json: dict = None, handle_rate_limit: bool = True, 
+        strict_raise: bool = False
     ):
         """
         Make a request to the Twitter API.
@@ -69,7 +70,8 @@ class TwitterAPIClient:
                 self._wait_rate_limit(response)
                 response = requests.request(method, url, headers=headers, params=params, json=json)
         try:
-            response.raise_for_status()  # Raise an error for bad responses
+            if strict_raise:
+                response.raise_for_status()  # Raise an error for bad responses
         except Exception as e:
             try:
                 reason = response.text

@@ -9,6 +9,9 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: streamlit-frontend
+    environment:
+      AIRFLOW_USERNAME: ${AIRFLOW_USERNAME}
+      AIRFLOW_PASSWORD: ${AIRFLOW_PASSWORD}
     networks: 
       - bigdata_network
       - default # Airflow network needed to connect streamlit and airflow
