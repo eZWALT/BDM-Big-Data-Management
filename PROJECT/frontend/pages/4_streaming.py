@@ -1,8 +1,6 @@
-import json
 import os
 import time
-from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,19 +13,6 @@ from loguru import logger
 
 STREAM_MANAGER_URL = os.getenv("STREAM_MANAGER_URL", "http://localhost:5000")
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-
-admin = KafkaAdminClient(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
-topics = admin.list_topics()
-consumer = KafkaConsumer(
-    bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-    value_deserializer=lambda v: json.loads(v.decode("utf-8")),
-    auto_offset_reset="latest",
-    enable_auto_commit=False,
-)
-consumer.subscribe(topics)
-for topic_partition in consumer.assignment():
-    # Seek to the beginning (0) for each partition
-    consumer.seek_to_beginning(topic_partition)
 
 
 def get_pods() -> List[Dict]:
@@ -74,39 +59,35 @@ def stop_pod(pod_id: str) -> None:
 
 # Function to display live sentiment chart
 def display_live_chart():
-    st.subheader("📈 Live Sentiment Tracking")
+    st.subheader("📈 Cumulative Events Handled")
 
     # Create a placeholder for the chart
+    raw_data: List[Tuple[pd.Timestamp, int]] = st.session_state.get("cumulative_events")
+    if raw_data is None:
+        # Create an empty dataframe
+        data = pd.DataFrame(columns=["timestamp", "cumulative_events"])
+    else:
+        data = pd.DataFrame(raw_data, columns=["timestamp", "cumulative_events"])
+
     chart_placeholder = st.empty()
 
-    data = pd.DataFrame(
-        {
-            "timestamp": pd.date_range(start=pd.Timestamp.now(), periods=10, freq="S"),
-            "sentiment_score": np.random.uniform(-1, 1, 10),
-        }
-    )
-
     fig, ax = plt.subplots()
-    ax.plot(data["timestamp"], data["sentiment_score"], marker="o", linestyle="-", color="blue")
-    ax.set_title("Real-Time Sentiment Score")
+    ax.plot(data["timestamp"], data["cumulative_events"], linestyle="-", color="blue")
     ax.set_xlabel("Timestamp")
-    ax.set_ylabel("Sentiment Score")
-    ax.axhline(0, color="gray", linestyle="--")
-
+    ax.set_ylabel("Cumulative Events")
     chart_placeholder.pyplot(fig)
+    st.write("**Note:** The chart updates every time a new event is received.")
 
 
 # Function to simulate and display event log
 def display_event_feed():
-    st.subheader("📡 Latest Events")
+    st.subheader("📡 Real-Time Event Feed")
 
     text = ""
-    messages = consumer.poll(timeout_ms=1)
-    if messages:
-        for topic_partition, records in messages.items():
-            for record in records:
-                text += str(record) + "\n"
-    stx.scrollableTextbox(text, height=400)
+    messages = st.session_state.messages
+    for message in messages:
+        text += str(message) + "\n"
+    stx.scrollableTextbox(text, height=500)
 
 
 def management_control_component():
@@ -160,8 +141,18 @@ def management_control_component():
 
 
 def show_layout():
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    if "cumulative_events" not in st.session_state:
+        st.session_state.cumulative_events = []
+
     st.set_page_config(page_title="Streaming - VibeRadar", layout="wide")
-    st.title("📡 Real-Time Streaming Data")
+    tit, btn = st.columns((10, 1))
+    with tit:
+        st.title("📡 Real-Time Streaming Dashboard")
+    with btn:
+        if st.button("Refresh"):
+            st.rerun()
     st.header("Stay Ahead with Real-Time Insights")
 
     st.write(
@@ -189,6 +180,49 @@ def show_layout():
 
     with col2:
         display_live_chart()
+
+    admin = KafkaAdminClient(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
+    topics = admin.list_topics()
+    consumer = KafkaConsumer(
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        value_deserializer=lambda v: v.decode("utf-8"),
+        auto_offset_reset="latest",
+        enable_auto_commit=False,
+    )
+    consumer.subscribe(topics)
+
+    logger.debug(f"[CONSUMER] Polling for new messages...")
+    while True:
+        try:
+            new_messages = []
+            messages = consumer.poll(timeout_ms=1000)
+            if messages:
+                for topic_partition, records in messages.items():
+                    for record in records:
+                        new_messages.append(record.value)
+                        logger.debug(f"[CONSUMER] New message: {record.value}")
+
+            st.session_state.cumulative_events.append(
+                (
+                    pd.Timestamp.now(),
+                    (
+                        st.session_state.cumulative_events[-1][1] + len(new_messages)
+                        if st.session_state.cumulative_events
+                        else len(new_messages)
+                    ),
+                )
+            )
+            # Keep only the last 2000 events
+            st.session_state.cumulative_events = st.session_state.cumulative_events[-2000:]
+
+            if new_messages:
+                st.session_state.messages = st.session_state.messages + new_messages
+                st.session_state.messages = st.session_state.messages[-20:]  # Keep only the last 20 messages
+                st.rerun()
+
+        except Exception as e:
+            logger.error(f"[CONSUMER] Error while polling messages: {e}")
+            time.sleep(1)
 
 
 if __name__ == "__main__":
