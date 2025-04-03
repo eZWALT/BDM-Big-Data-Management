@@ -41,7 +41,7 @@ def show_layout():
     st.markdown("💡 **Leverage data-driven insights to make smarter business decisions today!**")
 
     # Navigation tutorial & Call to action
-    st.header("How to Navigate")
+    st.header("Get Started!")
     st.write(
         """
     - **🥉 Landing Zone** → View and interact with raw ingested data.  
@@ -51,21 +51,7 @@ def show_layout():
     """
     )
 
-    st.header("Get Started!")
-    st.write("Click below to explore the various zones and interactive analytics:")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.page_link("pages/landing.py", label="🥉 Landing Zone (Bronze)", icon="🥉", use_container_width=True)
-    with col2:
-        st.page_link("pages/trusted.py", label="🥈 Trusted Zone (Silver)", icon="🥈", use_container_width=True)
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.page_link("pages/exploitation.py", label="🏆 Exploitation Zone (Gold)", icon="🏆", use_container_width=True)
-    with col2:
-        st.page_link("pages/streaming.py", label="📡 Real-Time Streaming", icon="📡", use_container_width=True)
-
+    
     # Team credits
     st.header("👥 Team")
     st.write("- **Walter J. Troiani Vargas**")

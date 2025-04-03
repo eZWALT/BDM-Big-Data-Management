@@ -1,9 +1,11 @@
 # Resulting files of executions
-*.mp4 
-*.mp3 
-*.wav 
-*.rst 
-*.txt 
+# *.mp4 
+# *.mp3 
+# *.wav 
+# *.parquet 
+# *.csv
+# *.rst 
+# *.txt 
 
 # Airflow related 
 airflow/logs/

@@ -3,6 +3,11 @@ from typing import List, Literal, Optional, Tuple, Union
 
 from atproto import Client, models
 
+if __name__ == "__main__":
+    import sys
+
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+
 from src.utils.config import ConfigManager
 
 
