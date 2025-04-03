@@ -1,9 +1,6 @@
 kafka:
-  bootstrap_servers: localhost:9092 # This should probably be extracted from the environment
   num_partitions: 1
   replication_factor: 1
-
-
 producers:
   - name: youtube-stream
     py_object: src.ingestion.stream.youtube_stream:YoutubeStreamProducer

@@ -1,5 +1,6 @@
 import json
 import multiprocessing
+import os
 from abc import ABC, abstractmethod
 from typing import List
 
@@ -7,6 +8,8 @@ from kafka import KafkaConsumer
 from loguru import logger
 
 from src.utils.config import ConfigManager
+
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 
 
 class StreamConsumer(ABC):
@@ -17,13 +20,13 @@ class StreamConsumer(ABC):
         self.polling_timeout = polling_timeout
         # We will
         self.read_consumer = KafkaConsumer(
-            bootstrap_servers=self.cfg._load_config()["kafka"]["bootstrap_servers"],
+            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
             value_deserializer=lambda v: json.loads(v.decode("utf-8")),
             auto_offset_reset="earliest",  # Start from the beggining
             enable_auto_commit=False,
         )
         self.stream_consumer = KafkaConsumer(
-            bootstrap_servers=self.cfg._load_config()["kafka"]["bootstrap_servers"],
+            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
             value_deserializer=lambda v: json.loads(v.decode("utf-8")),
             auto_offset_reset="latest",  # Start from the end (ideal for streaming)
             enable_auto_commit=False,
