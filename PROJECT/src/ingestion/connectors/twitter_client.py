@@ -156,15 +156,6 @@ def main():
 
     # Fetch replies to the tweets
     tweet_replies = {}
-    if 'data' in tweets:
-      for tweet in tweets['data']:  
-          replies = twitter_client.fetch_replies(recent_url, tweet['author_id'], tweet['id'], 
-              twitter_client.bearer_token)  # Fetching replies using the tweet ID
-          tweet_replies[tweet['id']] = replies
-          print("Tweet ID:", tweet['id'], "Replies:", replies)
-    else:
-        print("No data found or incorrect data structure.")"
-    """
     for tweet in tweets:
         replies = twitter_client.fetch_replies(tweet["id"], tweet["author_id"])
         tweet_replies[tweet["id"]] = replies
