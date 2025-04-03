@@ -11,6 +11,7 @@ import requests
 import streamlit as st
 import streamlit_scrollable_textbox as stx
 from kafka import KafkaAdminClient, KafkaConsumer
+from loguru import logger
 
 STREAM_MANAGER_URL = os.getenv("STREAM_MANAGER_URL", "http://localhost:5000")
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
@@ -51,12 +52,11 @@ def start_pod(pod_id: str) -> None:
     """
     try:
         response = requests.post(f"{STREAM_MANAGER_URL}/pods/{pod_id}/start")
-        if response.status_code == 200:
-            st.success(f"✅ Pod {pod_id} scheduled to start!")
-        else:
-            st.error(f"❌ Failed to start pod {pod_id}: {response.status_code}")
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error starting pod: {e}")
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"Error stopping pod {pod_id}: {e}")
+        return None
 
 
 def stop_pod(pod_id: str) -> None:
@@ -65,12 +65,11 @@ def stop_pod(pod_id: str) -> None:
     """
     try:
         response = requests.post(f"{STREAM_MANAGER_URL}/pods/{pod_id}/stop")
-        if response.status_code == 200:
-            st.success(f"✅ Stopping pod {pod_id}!")
-        else:
-            st.error(f"❌ Failed to stop pod {pod_id}: {response.status_code}")
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error stopping pod: {e}")
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"Error stopping pod {pod_id}: {e}")
+        return None
 
 
 # Function to display live sentiment chart
@@ -110,65 +109,54 @@ def display_event_feed():
     stx.scrollableTextbox(text, height=400)
 
 
-def pod_component(pod: dict):
-    """
-    Display pod information and controls.
-    """
-    st.markdown(f"#### 📦 Pod: {pod['client']} - {pod['query']} - {pod['producer']}")
-
-    state_colored_text = (
-        ":green[Running]"
-        if pod["state"] == "running"
-        else (
-            ":red[Failed]"
-            if pod["state"] == "failed"
-            else ":blue[Idle]" if pod["state"] == "idle" else f":orange[{pod['state'].capitalize()}]"
-        )
-    )
-
-    # Display pod state
-    st.write(f"**ID:** {pod['id']}")
-    st.write(f"**State:** {state_colored_text}")
-    st.write(f"**Producer:** {pod['producer']}")
-    st.write(f"**Client:** {pod['client']}")
-    st.write(f"**Query:** {pod['query']}")
-
-    # Controls to start/stop the pod
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button(f"▶️ Start Pod", use_container_width=True):
-            start_pod(pod["id"])
-            time.sleep(1)  # Wait for a second to allow the state to update
-            st.rerun()
-
-    with col2:
-        if st.button(f"⏸️ Stop Pod", use_container_width=True):
-            stop_pod(pod["id"])
-            time.sleep(1)  # Wait for a second to allow the state to update
-            st.rerun()
-
-
 def management_control_component():
     st.subheader("▶️ Streaming Management")
 
     available_pods = get_pods()
-    pods_map = {pod["id"]: pod for pod in available_pods} if available_pods else {}
     if len(available_pods) == 0:
         st.warning("⚠️ No pods found or unable to connect to Stream Manager.")
         return
     else:
-        selected_pod = st.selectbox(
-            "📌 Select a Pod to Manage:",
-            [pod["id"] for pod in available_pods],
-            format_func=lambda id: f"{pods_map[id]['client']} - {pods_map[id]['query']} - {pods_map[id]['producer']}",
-            placeholder="Select a pod",
-        )
+        col_distr = (3, 1, 2, 2, 1, 2)
+        columns = st.columns(col_distr)
+        fields = ["ID", "Client", "Query", "Producer", "State", "Controls"]
+        keys = ["id", "client", "query", "producer", "state_text"]
+        for col, field in zip(columns, fields):
+            col.write(f"**{field}**")
 
-        # Display selected pod information and controls
-        selected_pod_info = next((pod for pod in available_pods if pod["id"] == selected_pod), None)
-        if selected_pod_info:
-            pod_component(selected_pod_info)
+        for pod in available_pods:
+            pod["state_text"] = (
+                ":green[Running]"
+                if pod["state"] == "running"
+                else (
+                    ":red[Failed]"
+                    if pod["state"] == "failed"
+                    else ":blue[Idle]" if pod["state"] == "idle" else f":orange[{pod['state'].capitalize()}]"
+                )
+            )  # Add color to the state
+            columns = st.columns(col_distr)
+            for col, key in zip(columns, keys):
+                col.write(f"{pod[key]}")
+            # Display pod controls
+            with columns[-1]:
+                if pod["state"] == "running":
+                    btn, status = st.columns(2)
+                    with btn:
+                        if st.button("⏸️ Stop", key=f"stop_{pod['id']}"):
+                            with status:
+                                with st.spinner(""):
+                                    stop_pod(pod["id"])
+                                    time.sleep(1)
+                                    st.rerun()
+                else:
+                    btn, status = st.columns(2)
+                    with btn:
+                        if st.button("▶️ Start", key=f"start_{pod['id']}"):
+                            with status:
+                                with st.spinner(""):
+                                    start_pod(pod["id"])
+                                    time.sleep(1)
+                                    st.rerun()
 
 
 def show_layout():
@@ -193,13 +181,14 @@ def show_layout():
             """
         )
 
+    management_control_component()
     # Live chart & Event feed layout
     col1, col2 = st.columns(2)
     with col1:
         display_event_feed()
 
     with col2:
-        management_control_component()
+        display_live_chart()
 
 
 if __name__ == "__main__":

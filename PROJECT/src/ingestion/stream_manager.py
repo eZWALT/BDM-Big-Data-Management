@@ -151,28 +151,41 @@ class PodManager:
         self._pod_map[pod.id] = pod
 
     def delete_pod(self, pod: Pod):
+        logger.debug(f"Deleting pod {pod.id}")
         self.stop_pod(pod)
         self._pods.remove(pod)
         del self._pod_map[pod.id]
+        logger.debug(f"Pod {pod.id} deleted")
 
     def stop_pod(self, pod: Pod):
-        if not pod.id in self._processes:
+        logger.debug(f"Stopping pod {pod.id}")
+        self._update_pod_state(pod)
+        if pod.state != "running":
+            logger.warning(f"Pod {pod.id} is not running.")
             return
         process = self._processes.pop(pod.id)
-        process.terminate()
+        os.kill(process.pid, 9)  # Forcefully kill the process (Graceful shutdown is not implemented)
         process.join()
         pod.state = "idle"
+        logger.debug(f"Pod {pod.id} stopped")
 
     def start_pod(self, pod: Pod):
+        logger.debug(f"Starting pod {pod.id}")
+        self._update_pod_state(pod)
+        if pod.state == "running":
+            logger.warning(f"Pod {pod.id} is already running.")
+            return
         pod.state = "running"
         process = Process(
             target=pod.producer(**pod.init_kwargs).produce_forever,
             args=(pod.query,),
             kwargs=pod.kwargs,
             name=pod.id,
+            daemon=True,
         )
         process.start()
         self._processes[pod.id] = process
+        logger.debug(f"Pod {pod.id} started with process ID {process.pid}")
 
 
 manager = PodManager(_discover_pods())  # In a production environment, we would use a storage to persist the pods.
