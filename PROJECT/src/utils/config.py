@@ -17,7 +17,7 @@ import yaml
 
 
 class ConfigManager:
-    def __init__(self, config_path="config/api.yaml"):
+    def __init__(self, config_path="configuration/api.yaml"):
         self.config_path = config_path
         self.config = self._load_config()
 

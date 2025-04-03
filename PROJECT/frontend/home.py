@@ -19,15 +19,15 @@ def show_layout():
     st.header("Real-time Consumer Sentiment & Impact Analysis")
 
     st.write(
-        """
-    In today’s digital era, social media shapes consumer behavior like never before.  
-    **VibeRadar** is an advanced SaaS platform that provides real-time insights into **product launches, brand perception, and audience engagement** across global social platforms.  
+    """
+    In today’s digital era, social media shapes consumer behavior like never before.\n  
+    **VibeRadar** is an advanced SaaS platform that provides real-time insights into **product launches, brand perception, and audience engagement** across global social platforms.\n 
     With **VibeRadar**, businesses can **optimize marketing strategies, enhance decision-making, and stay ahead of emerging trends**—all with a **scalable, secure, and continuously evolving** analytics solution.
     """
     )
 
     # Logo image
-    #st.image("resources/logo2.jpeg", caption="", width=720)
+    st.image("resources/logo2.jpeg", caption="", width=720)
 
     st.markdown("### What We Offer:")
     st.write(

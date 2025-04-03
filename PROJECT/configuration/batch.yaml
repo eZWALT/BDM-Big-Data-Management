@@ -1,0 +1,55 @@
+producers:
+  - name: bluesky-batch
+    py_object: src.ingestion.batch.bluesky_batch:BlueskyBatchProducer
+    kwargs:
+      posts_batch_size: 100
+      likes_batch_size: 100
+      likes_db:
+        type: db
+        db_type: jsonl-file
+        kwargs:
+          file: data_lake/landing/temporal/{topic}/likes.jsonl
+      posts_db:
+        type: db
+        db_type: jsonl-file
+        kwargs:
+          file: data_lake/landing/temporal/{topic}/posts.jsonl
+  - name: twitter-batch
+    py_object: src.ingestion.batch.twitter_batch:TwitterBatchProducer
+    kwargs:
+      posts_batch_size: 100
+      posts_db:
+        type: db
+        db_type: jsonl-file
+        kwargs:
+          file: data_lake/landing/temporal/{topic}/posts.jsonl
+  - name: youtube-batch
+    py_object: src.ingestion.batch.youtube_batch:YoutubeBatchProducer
+    kwargs:
+      videos_batch_size: 1
+      comments_batch_size: 10
+      video_data_db:
+        type: db
+        db_type: jsonl-file
+        kwargs:
+          file: data_lake/landing/temporal/{topic}/videos.jsonl
+      comments_db:
+        type: db
+        db_type: jsonl-file
+        kwargs:
+          file: data_lake/landing/temporal/{topic}/comments.jsonl
+      videos_db:
+        type: db
+        db_type: files
+        kwargs:
+          folder: data_lake/landing/temporal/{topic}/videos
+      thumbnails_db:
+        type: db
+        db_type: files
+        kwargs:
+          folder: data_lake/landing/temporal/{topic}/thumbnails
+      audios_db:
+        type: db
+        db_type: files
+        kwargs:
+          folder: data_lake/landing/temporal/{topic}/audios

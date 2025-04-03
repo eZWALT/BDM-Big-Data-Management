@@ -1,0 +1,84 @@
+import json
+import multiprocessing
+from abc import ABC, abstractmethod
+from typing import List
+
+from kafka import KafkaConsumer
+from loguru import logger
+
+from src.utils.config import ConfigManager
+
+
+class StreamConsumer(ABC):
+    # Actively listen every 10 seconds
+    def __init__(self, id: str, polling_timeout: int = 1000):
+        self.id = id
+        self.cfg = ConfigManager(config_path="configuration/stream.yaml")
+        self.polling_timeout = polling_timeout
+        # We will
+        self.read_consumer = KafkaConsumer(
+            bootstrap_servers=self.cfg._load_config()["kafka"]["bootstrap_servers"],
+            value_deserializer=lambda v: json.loads(v.decode("utf-8")),
+            auto_offset_reset="earliest",  # Start from the beggining
+            enable_auto_commit=False,
+        )
+        self.stream_consumer = KafkaConsumer(
+            bootstrap_servers=self.cfg._load_config()["kafka"]["bootstrap_servers"],
+            value_deserializer=lambda v: json.loads(v.decode("utf-8")),
+            auto_offset_reset="latest",  # Start from the end (ideal for streaming)
+            enable_auto_commit=False,
+        )
+
+    def subscribe(self, topics: List[str]):
+        self.read_consumer.subscribe(topics)
+        self.stream_consumer.subscribe(topics)
+        logger.info(f"[{self.id}-CONSUMER] Subscribed to topics {topics}")
+
+    # Get all messages that are stored currently in the brokers
+    # for all topics associated with the consumer
+    def consume(self):
+        logger.info(f"[{self.id}-CONSUMER] Consuming all available messages for all topics")
+        try:
+            for topic_partition in self.read_consumer.assignment():
+                # Seek to the beginning (0) for each partition
+                self.read_consumer.seek_to_beginning(topic_partition)
+
+            messages = self.read_consumer.poll(timeout_ms=self.polling_timeout)
+            if messages:
+                for topic_partition, records in messages.items():
+                    for record in records:
+                        self.process_message(record)
+        except Exception as e:
+            logger.error(f"[{self.id}-CONSUMER] Error while consuming messages: {e}")
+
+    # Get all messages by actively listening (polling) on the brokers
+    # of all given topics continiously
+    def poll(self, verbose: bool = False):
+        logger.info(f"[{self.id}-CONSUMER] Polling for new messages...")
+        try:
+            while True:
+
+                messages = self.stream_consumer.poll(timeout_ms=self.polling_timeout)
+                if messages:
+                    for topic_partition, records in messages.items():
+                        for record in records:
+                            if verbose:
+                                logger.debug(
+                                    f"Record fetched: {record}, by process: {multiprocessing.current_process().pid}"
+                                )
+                            self.process_message(record)
+        except Exception as e:
+            logger.error(f"[{self.id}-CONSUMER] Error while polling messages: {e}")
+            logger.error(f"{e}")
+        finally:
+            self.close()
+
+    # Process behaviour of a single Kafka message
+    @abstractmethod
+    def process_message(self, message):
+        pass
+
+    def close(self):
+        self.read_consumer.close()
+        self.stream_consumer.close()
+        logger.info(f"[{self.id}-CONSUMER] Consumer closed.")
