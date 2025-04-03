@@ -4,3 +4,5 @@ numpy==1.26.4
 matplotlib==3.10.0
 pyyaml==6.0.2
 streamlit-file-browser==3.2.22
+streamlit-scrollable-textbox
+kafka-python==2.1.0

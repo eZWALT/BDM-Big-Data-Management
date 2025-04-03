@@ -13,6 +13,7 @@ services:
       AIRFLOW_USERNAME: ${AIRFLOW_USERNAME}
       AIRFLOW_PASSWORD: ${AIRFLOW_PASSWORD}
       STREAM_MANAGER_URL: http://stream-manager:5000
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     networks: 
       - bigdata_network
       - default # Airflow network needed to connect streamlit and airflow

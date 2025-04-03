@@ -1,5 +1,7 @@
+import json
 import os
 import time
+from datetime import datetime, timedelta
 from typing import Dict, List
 
 import matplotlib.pyplot as plt
@@ -7,8 +9,24 @@ import numpy as np
 import pandas as pd
 import requests
 import streamlit as st
+import streamlit_scrollable_textbox as stx
+from kafka import KafkaAdminClient, KafkaConsumer
 
 STREAM_MANAGER_URL = os.getenv("STREAM_MANAGER_URL", "http://localhost:5000")
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+
+admin = KafkaAdminClient(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
+topics = admin.list_topics()
+consumer = KafkaConsumer(
+    bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+    value_deserializer=lambda v: json.loads(v.decode("utf-8")),
+    auto_offset_reset="latest",
+    enable_auto_commit=False,
+)
+consumer.subscribe(topics)
+for topic_partition in consumer.assignment():
+    # Seek to the beginning (0) for each partition
+    consumer.seek_to_beginning(topic_partition)
 
 
 def get_pods() -> List[Dict]:
@@ -34,7 +52,7 @@ def start_pod(pod_id: str) -> None:
     try:
         response = requests.post(f"{STREAM_MANAGER_URL}/pods/{pod_id}/start")
         if response.status_code == 200:
-            st.success(f"✅ Pod {pod_id} started successfully!")
+            st.success(f"✅ Pod {pod_id} scheduled to start!")
         else:
             st.error(f"❌ Failed to start pod {pod_id}: {response.status_code}")
     except requests.exceptions.RequestException as e:
@@ -48,7 +66,7 @@ def stop_pod(pod_id: str) -> None:
     try:
         response = requests.post(f"{STREAM_MANAGER_URL}/pods/{pod_id}/stop")
         if response.status_code == 200:
-            st.success(f"✅ Pod {pod_id} stopped successfully!")
+            st.success(f"✅ Stopping pod {pod_id}!")
         else:
             st.error(f"❌ Failed to stop pod {pod_id}: {response.status_code}")
     except requests.exceptions.RequestException as e:
@@ -81,18 +99,15 @@ def display_live_chart():
 
 # Function to simulate and display event log
 def display_event_feed():
-    st.subheader("📡 Real-Time Event Log")
+    st.subheader("📡 Latest Events")
 
-    event_placeholder = st.empty()
-    events = []
-
-    for _ in range(20):  # Simulate 20 log entries
-        event = f"🔔 {pd.Timestamp.now().strftime('%H:%M:%S')} - New sentiment event detected!"
-        events.insert(0, event)  # Add new event to the top
-        if len(events) > 5:  # Keep last 5 events
-            events.pop()
-
-        event_placeholder.write("\n".join(events))
+    text = ""
+    messages = consumer.poll(timeout_ms=1)
+    if messages:
+        for topic_partition, records in messages.items():
+            for record in records:
+                text += str(record) + "\n"
+    stx.scrollableTextbox(text, height=400)
 
 
 def pod_component(pod: dict):
@@ -101,9 +116,19 @@ def pod_component(pod: dict):
     """
     st.markdown(f"#### 📦 Pod: {pod['client']} - {pod['query']} - {pod['producer']}")
 
+    state_colored_text = (
+        ":green[Running]"
+        if pod["state"] == "running"
+        else (
+            ":red[Failed]"
+            if pod["state"] == "failed"
+            else ":blue[Idle]" if pod["state"] == "idle" else f":orange[{pod['state'].capitalize()}]"
+        )
+    )
+
     # Display pod state
     st.write(f"**ID:** {pod['id']}")
-    st.write(f"**State:** {pod['state']}")
+    st.write(f"**State:** {state_colored_text}")
     st.write(f"**Producer:** {pod['producer']}")
     st.write(f"**Client:** {pod['client']}")
     st.write(f"**Query:** {pod['query']}")
@@ -114,10 +139,14 @@ def pod_component(pod: dict):
     with col1:
         if st.button(f"▶️ Start Pod", use_container_width=True):
             start_pod(pod["id"])
+            time.sleep(1)  # Wait for a second to allow the state to update
+            st.rerun()
 
     with col2:
         if st.button(f"⏸️ Stop Pod", use_container_width=True):
             stop_pod(pod["id"])
+            time.sleep(1)  # Wait for a second to allow the state to update
+            st.rerun()
 
 
 def management_control_component():
@@ -166,16 +195,11 @@ def show_layout():
 
     # Live chart & Event feed layout
     col1, col2 = st.columns(2)
-
     with col1:
-        display_live_chart()
         display_event_feed()
 
     with col2:
         management_control_component()
-
-    st.markdown("🔍 **Stay connected with live data and gain a competitive edge!**")
-    st.markdown("[Back to Home](pages/landing.py)")
 
 
 if __name__ == "__main__":
