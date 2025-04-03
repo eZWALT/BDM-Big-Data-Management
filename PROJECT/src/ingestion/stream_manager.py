@@ -1,5 +1,6 @@
 # Simple Flask app to manage the ingestion stream producers.
 
+import os
 import uuid
 from dataclasses import dataclass, field
 from multiprocessing import Process
@@ -10,7 +11,7 @@ from loguru import logger
 
 from src.utils.config import ConfigManager
 
-from ..stream import KafkaAdmin, ProducerConfig, StreamProducer, _format_topic, _load_stream_producer
+from .stream import KafkaAdmin, ProducerConfig, StreamProducer, _format_topic, _load_stream_producer
 
 app = Flask(__name__)
 
@@ -47,6 +48,7 @@ def _discover_pods() -> List[Pod]:
     # This is a placeholder implementation. In a real implementation, you would query the Kubernetes API
     # to get the list of pods and their state.
     config = ConfigManager("configuration/stream.yaml")
+    KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
     producer_configs: List[ProducerConfig] = config._load_config()["producers"]
     stream_producers: List[Tuple[str, Type[StreamProducer], dict]] = []
     found_names: set[str] = set()
@@ -64,8 +66,8 @@ def _discover_pods() -> List[Pod]:
             )
         )
 
+    kafka_admin = KafkaAdmin(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
     kafka_config = config._load_config()["kafka"]
-    kafka_admin = KafkaAdmin(bootstrap_servers=kafka_config["bootstrap_servers"])
 
     products: List[Tuple[str, str]] = []  # This is what should be discovered from the client configs.
     products.append(("nike", "water jordan"))
@@ -90,7 +92,7 @@ def _discover_pods() -> List[Pod]:
                     query=query,
                     state="idle",
                     producer=producer,
-                    init_kwargs={"topic": topic, "bootstrap_servers": kafka_config["bootstrap_servers"]},
+                    init_kwargs={"topic": topic, "bootstrap_servers": KAFKA_BOOTSTRAP_SERVERS},
                     kwargs=kwargs,
                 )
             )

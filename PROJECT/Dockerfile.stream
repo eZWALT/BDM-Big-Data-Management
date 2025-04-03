@@ -50,4 +50,4 @@ COPY ./configuration ./configuration
 EXPOSE 5000
 
 # Run the application.
-CMD gunicorn 'src.ingestion.stream_manager.app:app' --bind=0.0.0.0:5000 --workers=1
+CMD gunicorn 'src.ingestion.stream_manager:app' --bind=0.0.0.0:5000 --workers=1 --threads=12

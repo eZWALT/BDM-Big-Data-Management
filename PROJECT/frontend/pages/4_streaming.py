@@ -1,3 +1,4 @@
+import os
 import time
 from typing import Dict, List
 
@@ -7,7 +8,7 @@ import pandas as pd
 import requests
 import streamlit as st
 
-STREAM_MANAGER_URL = "http://stream-manager:5000"
+STREAM_MANAGER_URL = os.getenv("STREAM_MANAGER_URL", "http://localhost:5000")
 
 
 def get_pods() -> List[Dict]:
@@ -98,9 +99,10 @@ def pod_component(pod: dict):
     """
     Display pod information and controls.
     """
-    st.subheader(f"📦 Pod: {pod['id']}")
+    st.markdown(f"#### 📦 Pod: {pod['client']} - {pod['query']} - {pod['producer']}")
 
     # Display pod state
+    st.write(f"**ID:** {pod['id']}")
     st.write(f"**State:** {pod['state']}")
     st.write(f"**Producer:** {pod['producer']}")
     st.write(f"**Client:** {pod['client']}")
@@ -110,11 +112,11 @@ def pod_component(pod: dict):
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button(f"▶️ Start Pod"):
+        if st.button(f"▶️ Start Pod", use_container_width=True):
             start_pod(pod["id"])
 
     with col2:
-        if st.button(f"⏸️ Stop Pod"):
+        if st.button(f"⏸️ Stop Pod", use_container_width=True):
             stop_pod(pod["id"])
 
 
@@ -122,11 +124,17 @@ def management_control_component():
     st.subheader("▶️ Streaming Management")
 
     available_pods = get_pods()
+    pods_map = {pod["id"]: pod for pod in available_pods} if available_pods else {}
     if len(available_pods) == 0:
         st.warning("⚠️ No pods found or unable to connect to Stream Manager.")
         return
     else:
-        selected_pod = st.selectbox("📌 Select a Pod to Manage:", [pod["id"] for pod in available_pods])
+        selected_pod = st.selectbox(
+            "📌 Select a Pod to Manage:",
+            [pod["id"] for pod in available_pods],
+            format_func=lambda id: f"{pods_map[id]['client']} - {pods_map[id]['query']} - {pods_map[id]['producer']}",
+            placeholder="Select a pod",
+        )
 
         # Display selected pod information and controls
         selected_pod_info = next((pod for pod in available_pods if pod["id"] == selected_pod), None)
@@ -161,9 +169,9 @@ def show_layout():
 
     with col1:
         display_live_chart()
+        display_event_feed()
 
     with col2:
-        display_event_feed()
         management_control_component()
 
     st.markdown("🔍 **Stay connected with live data and gain a competitive edge!**")

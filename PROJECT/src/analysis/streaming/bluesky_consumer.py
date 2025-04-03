@@ -20,9 +20,9 @@ class BlueskyConsumer(StreamConsumer):
 
 
 if __name__ == "__main__":
+    KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
     config = ConfigManager(config_path="configuration/stream.yaml")
-    bootstrap_servers = config._load_config()["kafka"]["bootstrap_servers"]
-    admin = KafkaAdminClient(bootstrap_servers=bootstrap_servers)
+    admin = KafkaAdminClient(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
     topics = admin.list_topics()
     topics = list(filter(lambda x: x.startswith("bluesky"), topics))
 

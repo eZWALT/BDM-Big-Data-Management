@@ -39,6 +39,24 @@ services:
     container_name: stream-manager
     depends_on:
       - kafka
-    env_file:
-      - .env
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - BLUESKY_EMAIL=${BLUESKY_EMAIL}
+      - BLUESKY_PASSWORD=${BLUESKY_PASSWORD}
+      - TWITTER_API_KEY=${TWITTER_API_KEY}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
     restart: unless-stopped
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8082:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: "kafka"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:9092"
+      KAFKA_CLUSTERS_0_ZOOKEEPER: "kafka-zookeeper:2181"
+    restart: unless-stopped
+

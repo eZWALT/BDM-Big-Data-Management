@@ -1,5 +1,6 @@
 import importlib
 import json
+import os
 import time
 import traceback
 from abc import ABC, abstractmethod
@@ -29,6 +30,8 @@ from src.utils.task import Task
 #                                                                              #
 # Author: Marc Parcerisa, Walter J.T.V                                         #
 # ===-----------------------------------------------------------------------===#
+
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 
 
 # This producer is identified by ID
@@ -129,6 +132,7 @@ class StreamProduceTask(Task):
     def __init__(self):
         super().__init__()
         self.config = ConfigManager("configuration/stream.yaml")
+
         self.producer_configs: List[ProducerConfig] = self.config._load_config()["producers"]
         self.stream_producers: Dict[str, Tuple[Type[StreamProducer], dict]] = {}
 
@@ -142,7 +146,7 @@ class StreamProduceTask(Task):
             )
 
         self.kafka_config = self.config._load_config()["kafka"]
-        self.kafka_admin = KafkaAdmin(bootstrap_servers=self.kafka_config["bootstrap_servers"])
+        self.kafka_admin = KafkaAdmin(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
 
     def setup(self):
         pass
@@ -159,7 +163,7 @@ class StreamProduceTask(Task):
                         replication_factor=self.kafka_config["replication_factor"],
                     )
                 process = Process(
-                    target=producer(self.kafka_config["bootstrap_servers"], topic).produce_forever,
+                    target=producer(KAFKA_BOOTSTRAP_SERVERS, topic).produce_forever,
                     args=(query,),
                     kwargs=kwargs,
                     name=topic,
