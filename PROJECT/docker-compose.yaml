@@ -1,6 +1,6 @@
 include:
   - airflow-compose.yaml
-  # - kafka-compose.yaml
+  - kafka-compose.yaml
   # - spark-compose.yaml
 
 services:

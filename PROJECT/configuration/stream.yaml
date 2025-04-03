@@ -1,5 +1,5 @@
 kafka:
-  bootstrap_servers: localhost:9092 # This should probably be extracted from the environment
+  bootstrap_servers: kafka:9092 # This should probably be extracted from the environment
   num_partitions: 1
   replication_factor: 1
 

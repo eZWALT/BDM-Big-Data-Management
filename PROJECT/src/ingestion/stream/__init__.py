@@ -116,6 +116,15 @@ def _load_stream_producer(py_object: str) -> Type[StreamProducer]:
     return cls
 
 
+def _format_topic(producer_name: str, query: str) -> str:
+    """
+    Format the name of the task based on the producer name, database name, and query.
+    """
+    # Use sha256 to hash the query for a consistent length, and take the first 8 characters
+    query_hash = sha256(query.encode("utf-8")).hexdigest()[:8]
+    return f"{producer_name}-{query_hash}"
+
+
 class StreamProduceTask(Task):
     def __init__(self):
         super().__init__()
@@ -138,20 +147,11 @@ class StreamProduceTask(Task):
     def setup(self):
         pass
 
-    @staticmethod
-    def _format_topic(producer_name: str, query: str) -> str:
-        """
-        Format the name of the task based on the producer name, database name, and query.
-        """
-        # Use sha256 to hash the query for a consistent length, and take the first 8 characters
-        query_hash = sha256(query.encode("utf-8")).hexdigest()[:8]
-        return f"{producer_name}-{query_hash}"
-
     def execute(self, queries: List[str]):
         processes: List[Process] = []
         for name, (producer, kwargs) in self.stream_producers.items():
             for query in queries:
-                topic = self._format_topic(name, query)
+                topic = _format_topic(name, query)
                 if not self.kafka_admin.topic_exists(topic):
                     self.kafka_admin.create_topic(
                         topic=topic,
