@@ -4,6 +4,7 @@ from airflow.operators.python import PythonOperator
 
 # ===----------------------------------------------------------------------===#
 # Silly LinkedIn Test DAG                                                     #
+# This Dag can be used as a simple healthcheck test dag  (e.g migrations)     #
 #                                                                             #
 # Author: Walter J.T.V                                                        #          
 # ===----------------------------------------------------------------------===#

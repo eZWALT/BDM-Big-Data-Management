@@ -5,7 +5,7 @@ import os
 from streamlit_file_browser import st_file_browser
 
 # Airflow API Configuration (Extracted from Docker Compose) to get URL
-LOCAL_TEST = False
+LOCAL_TEST = True
 AIRFLOW_URL = "http://localhost:8080/api/v1" if LOCAL_TEST else "http://airflow-webserver:8080/api/v1"
 AIRFLOW_AUTH = (
     os.getenv("AIRFLOW_USERNAME", "airflow"),  
@@ -21,7 +21,7 @@ def get_airflow_dags():
             dags = response.json()["dags"]
             return [dag["dag_id"] for dag in dags]
         else:
-            st.error(f"Failed to fetch DAGs: {response.status_code}")
+            st.error(f"Failed to fetch DAGs: {response.status_code} - {response.text}")
             return []
     except requests.exceptions.RequestException as e:
         st.error(f"Error connecting to Airflow: {e}")
@@ -39,33 +39,33 @@ def get_dag_status(dag_id):
             else:
                 return "No Runs", "N/A"
         else:
-            st.error(f"Failed to fetch DAG status: {response.status_code}")
+            st.error(f"Failed to fetch DAG status: {response.status_code} - {response.text}")
             return "Error", "N/A"
     except requests.exceptions.RequestException as e:
         st.error(f"Error fetching DAG status: {e}")
         return "Error", "N/A"
 
 def pause_dag(dag_id):
-    url = f"{AIRFLOW_URL}/dags/{dag_id}/paused"
+    url = f"{AIRFLOW_URL}/dags/{dag_id}"
     payload = {"is_paused": True}
     try:
         response = requests.patch(url, json=payload, auth=AIRFLOW_AUTH, timeout=5)
         if response.status_code == 200:
             st.success(f"✅ DAG {dag_id} paused successfully!")
         else:
-            st.error(f"❌ Failed to pause DAG {dag_id}: {response.status_code}")
+            st.error(f"❌ Failed to pause DAG {dag_id}: {response.status_code} - {response.text}")
     except requests.exceptions.RequestException as e:
         st.error(f"Error pausing DAG: {e}")
 
 def unpause_dag(dag_id):
-    url = f"{AIRFLOW_URL}/dags/{dag_id}/paused"
+    url = f"{AIRFLOW_URL}/dags/{dag_id}"
     payload = {"is_paused": False}
     try:
         response = requests.patch(url, json=payload, auth=AIRFLOW_AUTH, timeout=5)
         if response.status_code == 200:
             st.success(f"✅ DAG {dag_id} unpaused successfully!")
         else:
-            st.error(f"❌ Failed to unpause DAG {dag_id}: {response.status_code}")
+            st.error(f"❌ Failed to unpause DAG {dag_id}: {response.status_code} - {response.text}")
     except requests.exceptions.RequestException as e:
         st.error(f"Error unpausing DAG: {e}")
 
@@ -77,7 +77,7 @@ def trigger_dag(dag_id):
         if response.status_code == 200:
             st.success(f"✅ DAG {dag_id} triggered successfully!")
         else:
-            st.error(f"❌ Failed to trigger {dag_id}: {response.status_code}")
+            st.error(f"❌ Failed to trigger {dag_id}: {response.status_code} - {response.text}")
     except requests.exceptions.RequestException as e:
         st.error(f"Error triggering DAG: {e}")
 
@@ -116,24 +116,24 @@ def show_airflow_component():
         if dag_status == "running":
             st.warning("⚠️ This DAG is currently running.")
         elif dag_status == "failed":
-            st.error("❌ This DAG run failed. Please check the logs.")
+            st.error("❌ Last DAG run failed. Please check the logs.")
         elif dag_status == "paused":
             st.info("🔒 This DAG is paused. You can resume it below.")
 
-        with st.expander("DAG Controls"):
+        with st.expander("DAG Controls", expanded=True):
             # Pause/Unpause Controls in columns
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                if st.button(f"⏸️ Pause DAG {selected_dag}"):
+                if st.button(f"⏸️ Pause DAG\n {selected_dag}"):
                     pause_dag(selected_dag)
 
             with col2:
-                if st.button(f"⏺️ Unpause DAG {selected_dag}"):
+                if st.button(f"⏺️ Unpause DAG\n {selected_dag}"):
                     unpause_dag(selected_dag)
                     
             with col3:
-                if st.button(f"▶️ Trigger DAG {selected_dag}"):
+                if st.button(f"▶️ Trigger DAG\n {selected_dag}"):
                     trigger_dag(selected_dag)
 
     else:

@@ -77,7 +77,7 @@ def create_dummy_test_dag(config: DAGConfig):
 # Wrapper BatchProduceTask call with default parameters
 def batch_produce_task(
     queries: List[str],
-    utc_since: Optional[datetime] = datetime.now(tz=timezone.utc) - timedelta(days=2),
+    utc_since: Optional[datetime] = datetime.now(tz=timezone.utc) - timedelta(days=1),
     utc_until: Optional[datetime] = datetime.now(tz=timezone.utc) - timedelta(seconds=11)) -> None:
     task = BatchProduceTask()
     task.execute(
@@ -101,8 +101,10 @@ def create_batch_product_tracking_dag(config: DAGConfig):
         ingestion_task = PythonOperator(
             task_id="batch_ingestion",
             python_callable=batch_produce_task,
-            op_args={ # Keyword arguments
-                'queries': config.product.keywords + [config.product.name],  
+            op_args = {  
+                "queries": config.product.keywords + [config.product.name],  
+                "utc_since": (datetime.now(tz=timezone.utc) - timedelta(days=1)).isoformat(),  
+                "utc_until": (datetime.now(tz=timezone.utc) - timedelta(seconds=11)).isoformat()  
             }
         )
 

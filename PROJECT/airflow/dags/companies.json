@@ -30,7 +30,7 @@
                     "description": "nike fake ass jordans",
                     "retries": 3,
                     "retry_delay": 60,
-                    "schedule_interval": "@hourly",
+                    "schedule_interval": "@daily",
                     "catchup": "False"
                 }
             }
@@ -39,28 +39,6 @@
     {
         "company_id": "microsoft",
         "products": [
-            {
-                "product_name": "Azure",
-                "product_keywords": [
-                    "Expensive",
-                    "Downtime",
-                    "Confusing Pricing"
-                ],
-                "tracking_tier": "premium",
-                "usecase_airflow_args": {
-                    "description": "microsoft azure",
-                    "retries": 3,
-                    "retry_delay": 60,
-                    "schedule_interval": "@daily",
-                    "start_date": "2024-01-01",
-                    "email": [
-                        "walter.jose.troiani@estudiantat.upc.edu"
-                    ],
-                    "email_on_failure": "True",
-                    "email_on_retry": "False",
-                    "catchup": "False"
-                }
-            },
             {
                 "product_name": "Edge Browser",
                 "product_keywords": [

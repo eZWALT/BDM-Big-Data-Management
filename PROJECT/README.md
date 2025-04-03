@@ -104,7 +104,6 @@ For the 1st part of the project, the following tasks must be completed:
 - [ ] Automatize delta lake (dag) and put it in docker?      (Mateja, Walter)
 - [ ] Writing the final report                               (Mateja, Marc, Walter)
 - [ ] Fixing relative paths in airflow (data_lake)           (Walter)
-- [ ] Rewrite codebase to avoid throwing exceptions
 
 
 For the 2nd part of the project, the following tasks must be completed:
