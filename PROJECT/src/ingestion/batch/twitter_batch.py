@@ -1,6 +1,9 @@
 from datetime import datetime
 from typing import Generator, List, Optional, Tuple
 
+from pyspark.sql.functions import col
+from delta_lake_script import create_spark_session
+
 from atproto import models
 from loguru import logger
 
