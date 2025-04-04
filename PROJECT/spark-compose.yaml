@@ -17,6 +17,7 @@ services:
         SPARK_SSL_ENABLED: no
         SPARK_USER: spark
         SPARK_UI_PORT: 8089
+        SPARK_SUBMIT_OPTIONS: '--packages.io.delta:core-core_2.12:2.4.0'
     ports:
         - "7077:7077" # MASTER PORTS
         - "8089:8080" # SPARK DASHBOARD UI
@@ -59,3 +60,4 @@ services:
         SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: no
         SPARK_SSL_ENABLED: no
         SPARK_USER: spark
+

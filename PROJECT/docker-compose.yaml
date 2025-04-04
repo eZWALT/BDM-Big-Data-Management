@@ -1,26 +1,26 @@
 include:
-  - airflow-compose.yaml
-  - kafka-compose.yaml
-  # - spark-compose.yaml
+  #- airflow-compose.yaml
+  #- kafka-compose.yaml
+  - spark-compose.yaml
 
-services:
-  streamlit-frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: streamlit-frontend
-    environment:
-      AIRFLOW_USERNAME: ${AIRFLOW_USERNAME}
-      AIRFLOW_PASSWORD: ${AIRFLOW_PASSWORD}
-      STREAM_MANAGER_URL: http://stream-manager:5000
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-    networks: 
-      - bigdata_network
-      - default # Airflow network needed to connect streamlit and airflow
-    ports:
-      - 9999:9999
-    working_dir: /app 
-    restart: unless-stopped
+#services:
+  # streamlit-frontend:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: streamlit-frontend
+  #   environment:
+  #     AIRFLOW_USERNAME: ${AIRFLOW_USERNAME}
+  #     AIRFLOW_PASSWORD: ${AIRFLOW_PASSWORD}
+  #     STREAM_MANAGER_URL: http://stream-manager:5000
+  #     KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  #   networks: 
+  #     - bigdata_network
+  #     - default # Airflow network needed to connect streamlit and airflow
+  #   ports:
+  #     - 9999:9999
+  #   working_dir: /app 
+  #   restart: unless-stopped
 
 networks:
   bigdata_network:

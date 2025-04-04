@@ -12,6 +12,7 @@ import os
 def create_spark_session():
     return SparkSession.builder \
         .appName("DeltaLakeApp") \
+        .master("spark://localhost:7077") \
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
         .getOrCreate()
@@ -51,7 +52,7 @@ def main():
     spark_session = create_spark_session()
 
     # Define the path for the Delta table
-    delta_table_path = "data_lake/landing/persistent/delta-table"
+    delta_table_path = "delta-table"
 
     # Path where we get the data from
     data_path = "data_lake/landing/temporal"
