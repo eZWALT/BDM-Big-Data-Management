@@ -52,7 +52,7 @@ def main():
     spark_session = create_spark_session()
 
     # Define the path for the Delta table
-    delta_table_path = "delta-table"
+    delta_table_path = "data_lake/landing/persistent/delta-table"
 
     # Path where we get the data from
     data_path = "data_lake/landing/temporal"
