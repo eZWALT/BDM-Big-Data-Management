@@ -10,6 +10,7 @@ from airflow.decorators import dag, task
 
 from src.utils.company import deserialize_companies_from_json, Company, Product
 from src.ingestion.batch import BatchProduceTask
+from src.landing.create_data_lake import CreateDataLakeTask
 
 # ===----------------------------------------------------------------------===#
 # Automatic USE-CASE DAG Generation                                           #
@@ -85,6 +86,14 @@ def batch_produce_task(
         utc_since=utc_since,
         utc_until=utc_until
     )
+
+# Wrapper CreateDataLakeTask call with default parameters
+def create_landing_zone_data_lake(
+    temporal_path: str, 
+    persistent_path: str,
+) -> None: 
+    task = CreateDataLakeTask(temporal_path=temporal_path, persistent_path=persistent_path)
+    task.execute()
     
 # BIG TODO: Fix extra arguments and end this dag and add flexibility to ingestion (now time ranges are frozen)
 def create_batch_product_tracking_dag(config: DAGConfig):
@@ -107,9 +116,8 @@ def create_batch_product_tracking_dag(config: DAGConfig):
                 "utc_until": (datetime.now(tz=timezone.utc) - timedelta(seconds=11)).isoformat()  
             }
         )
-
-        # TODO: End this Landing task and remove this placeholder :)
-        landingzone_store_task = PythonOperator(
+        
+        landingzone_task = PythonOperator(
             task_id="landingzone_store",
             python_callable=lambda: logging.info(
                 f"Starting data storage for company {config.company.company_id} "
@@ -118,8 +126,18 @@ def create_batch_product_tracking_dag(config: DAGConfig):
                 f"Task started at {datetime.now().strftime('%H:%M:%S')}."
             ),
         )
+
+        # TODO: Check if the paths are correct or not :)
+        # landingzone_task = PythonOperator(
+        #     task_id="create_landing_datalake",
+        #     python_callable=create_landing_zone_data_lake, 
+        #     op_args= {
+        #         "temporal_path": "dags/data_lake/temporal",
+        #         "persistent_path": "dags/data_lake/persistent",
+        #     }
+        # )
         
-        ingestion_task >> landingzone_store_task
+        ingestion_task >> landingzone_task
     
     return dag
 # ===----------------------------------------------------------------------===#
