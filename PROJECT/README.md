@@ -28,15 +28,10 @@ This topic is still a work-in-progress section:
 - **Docker** 
 - **Apache Kafka**
 - **Apache ZooKeeper**
-- **Jupyter**
 - **DeltaLake**
 - **Apache Spark**
 - **Apache Airflow**
 - **Streamlit**
-
-## Design 
-
-WIP
 
 
 ## Usage

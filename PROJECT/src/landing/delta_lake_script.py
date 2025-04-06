@@ -6,7 +6,7 @@ import os
 # ===-----------------------------------------------------------------------===#
 # Script to create and insert data into delta lake                             #
 #                                                                              #
-# Author: Mateja Zatezalo                                                      #
+# Author: Walter J.T.V, Mateja Zatezalo                                        #
 # ===-----------------------------------------------------------------------===#
 
 def create_spark_session():

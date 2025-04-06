@@ -1,0 +1,14 @@
+# Start with the official Apache Airflow image
+FROM apache/airflow:2.10.5
+
+# Install OpenJDK (Java 17) needed for spark!!!
+USER root 
+RUN apt-get update && apt-get install -y openjdk-17-jdk
+# Set JAVA_HOME environment variable
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+
+USER airflow
+
+# BIG TODO: Put airflow python3 requirements here by using a requirements.txt
+# file instead of using the dirt PIP_ADDITIONAL_REQUIREMENTS docker image thingy
