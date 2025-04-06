@@ -73,85 +73,37 @@ class CreateDataLakeTask(Task):
             logger.error("The specified path does not contain a Delta table.")
 
     
-    # def _load_supported_files_to_delta_format(self):
-    #         for subdir, _, files in os.walk(self.temporal_path):
-    #             for file in files:
-    #                 ext = os.path.splitext(file)[1].lower()
-    #                 file_path = os.path.join(subdir, file)
-
-    #                 # Handle structured formats (tabular)
-    #                 if ext in [f".{fmt}" for fmt in self.SUPPORTED_FORMATS]:
-    #                     format = ext.lstrip(".")
-    #                     try:
-    #                         df = self.spark.read.format(format).load(file_path)
-    #                         df.write.format("delta").mode("append").save(self.persistent_delta)
-    #                         logger.success(f"[✓] Ingested {file} as {format}")
-    #                     except Exception as e:
-    #                         logger.error(f"[!] Failed to process {file}: {e}")
-
-    #                 # Handle blob files (non-tabular)
-    #                 elif ext in self.SUPPORTED_BLOB_EXTENSIONS:
-    #                     try:
-    #                         os.makedirs(self.blob_output_path, exist_ok=True)
-    #                         dst = os.path.join(self.blob_output_path, file)
-    #                         if not os.path.exists(dst):  # Avoid overwriting
-    #                             with open(file_path, "rb") as src_file, open(dst, "wb") as dest_file:
-    #                                 dest_file.write(src_file.read())
-    #                             logger.success(f"[✓] Copied blob file: {file}")
-    #                         else:
-    #                             logger.warning(f"[!] Blob file already exists, skipped: {file}")
-    #                     except Exception as e:
-    #                         logger.error(f"[!] Failed to copy blob file {file}: {e}")
-    
     def _load_supported_files_to_delta_format(self):
-        # Print the temporal path to check it's being passed correctly
-        print(f"Temporal Path: {self.temporal_path}")
+            for subdir, _, files in os.walk(self.temporal_path):
+                for file in files:
+                    ext = os.path.splitext(file)[1].lower()
+                    file_path = os.path.join(subdir, file)
 
-        # Walk through all files in the temporal path
-        for subdir, _, files in os.walk(self.temporal_path):
-            print(f"Checking directory: {subdir}")
-            
-            for file in files:
-                print(f"Found file: {file}")
-                ext = os.path.splitext(file)[1].lower()  # Extract file extension
-                file_path = os.path.join(subdir, file)  # Full file path
-                print(f"File path: {file_path}")
-                print(f"File extension: {ext}")
+                    # Handle structured formats (tabular)
+                    if ext in [f".{fmt}" for fmt in self.SUPPORTED_FORMATS]:
+                        format = ext.lstrip(".")
+                        try:
+                            # THIS SPARK.READ EXPLODES DUE TO INVALID PATH (Reads my computer path instead of dockers)
+                            df = self.spark.read.format(format).load(file_path)
+                            df.write.format("delta").mode("append").save(self.persistent_delta) 
+                            logger.success(f"[✓] Ingested {file} as {format}")
+                        except Exception as e:
+                            logger.error(f"[!] Failed to process {file}: {e}")
 
-                # Handle structured formats (tabular)
-                if ext in [f".{fmt}" for fmt in self.SUPPORTED_FORMATS]:
-                    format = ext.lstrip(".")
-                    print(f"Handling structured file as format: {format}")
-                    try:
-                        print(f"Attempting to load file: {file_path}")
-                        df = self.spark.read.format(format).load(file_path)
-                        print(f"File loaded successfully: {file_path}")
-                        df.write.format("delta").mode("append").save(self.persistent_delta)
-                        print(f"File {file} ingested as {format} into Delta Lake")
-                        logger.success(f"[✓] Ingested {file} as {format}")
-                    except Exception as e:
-                        logger.error(f"[!] Failed to process {file}: {e}")
-                        print(f"[!] Failed to process {file}: {e}")
-
-                # Handle blob files (non-tabular)
-                elif ext in self.SUPPORTED_BLOB_EXTENSIONS:
-                    print(f"Handling blob file: {file}")
-                    try:
-                        os.makedirs(self.blob_output_path, exist_ok=True)
-                        dst = os.path.join(self.blob_output_path, file)
-                        print(f"Destination path for blob: {dst}")
-                        if not os.path.exists(dst):  # Avoid overwriting
-                            with open(file_path, "rb") as src_file, open(dst, "wb") as dest_file:
-                                dest_file.write(src_file.read())
-                            logger.success(f"[✓] Copied blob file: {file}")
-                            print(f"Blob file copied successfully: {file}")
-                        else:
-                            logger.warning(f"[!] Blob file already exists, skipped: {file}")
-                            print(f"Blob file already exists, skipped: {file}")
-                    except Exception as e:
-                        logger.error(f"[!] Failed to copy blob file {file}: {e}")
-                        print(f"[!] Failed to copy blob file {file}: {e}")
-                                
+                    # Handle blob files (non-tabular)
+                    elif ext in self.SUPPORTED_BLOB_EXTENSIONS:
+                        try:
+                            os.makedirs(self.blob_output_path, exist_ok=True)
+                            dst = os.path.join(self.blob_output_path, file)
+                            if not os.path.exists(dst):  # Avoid overwriting
+                                with open(file_path, "rb") as src_file, open(dst, "wb") as dest_file:
+                                    dest_file.write(src_file.read())
+                                logger.success(f"[✓] Copied blob file: {file}")
+                            else:
+                                logger.warning(f"[!] Blob file already exists, skipped: {file}")
+                        except Exception as e:
+                            logger.error(f"[!] Failed to copy blob file {file}: {e}")
+                            
 
     # Entrypoint for the landing zone task.
     # Loads compatible structured files into Delta format,

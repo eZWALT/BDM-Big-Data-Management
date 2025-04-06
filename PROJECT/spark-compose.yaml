@@ -70,6 +70,6 @@ services:
   #       SPARK_SUBMIT_OPTIONS: '--packages.io.delta:core-core_2.12:2.4.0'
   #   volumes:
   #     # Test data lake path
-  #     - ./data_lake:/opt/bitnami/spark/data_lake
+  #      - ./data_lake:/opt/bitnami/spark/data_lake
 
 
