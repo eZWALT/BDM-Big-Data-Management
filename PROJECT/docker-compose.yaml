@@ -1,5 +1,5 @@
 include:
-  #- airflow-compose.yaml
+  - airflow-compose.yaml
   #- kafka-compose.yaml
   - spark-compose.yaml
 
