@@ -1,4 +1,6 @@
 from pyspark.sql import SparkSession
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+
 from delta import DeltaTable
 from delta import *
 import os
@@ -26,8 +28,8 @@ from src.utils.task import Task, TaskStatus
 
 class CreateDataLakeTask(Task):
     def __init__(self,
-                 temporal_path: str = "data_lake/landing/temporal",
-                 persistent_path: str = "data_lake/landing/persistent",
+                 temporal_path: str = "/data_lake/landing/temporal",
+                 persistent_path: str = "/data_lake/landing/persistent",
                  spark_master_url: str = "spark://localhost:7077",
                  ) -> None:
         super().__init__()
@@ -37,11 +39,17 @@ class CreateDataLakeTask(Task):
         # Common Paths
         self.temporal_path = temporal_path
         self.persistent_path = persistent_path 
-        self.persistent_delta = os.path.join(persistent_path,"delta-table")     
+        self.persistent_delta = os.path.join(persistent_path,"delta")     
         self.blob_output_path = os.path.join(persistent_path, "blobs")
    
         # Spark 
         self.spark = self._create_spark_session(spark_master_url=spark_master_url)
+        
+        # Quick test THIS WORKS
+        data = self.spark.range(0, 5)
+        data.write.format("delta").save("/tmp/delta-table")
+        df = self.spark.read.format("delta").load("/tmp/delta-table")
+        df.show()
         
     def setup(self):
         pass
@@ -54,25 +62,32 @@ class CreateDataLakeTask(Task):
             .master(spark_master_url) \
             .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
             .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-            .config("spark.jars.packages", "io.delta:delta-core_2.12:2.4.0") \
-            .getOrCreate()        
+            .config("spark.jars.packages", "io.delta:delta-spark_2.12:3.2.0") \
+            .getOrCreate()     
                 
     def delete_from_delta_table(self):
-        """
-        Deletes data from a Delta Lake table.
-
-        Parameters:
-        - spark: SparkSession object.
-        - delta_table_path: The path to the Delta Lake table.
-        """
         # Ensure the table exists
         if DeltaTable.isDeltaTable(self.spark, self.persistent_delta):
-            deltaTable = DeltaTable.forPath(self.spark, self.persistent_delta)
+            deltaTable = DeltaTable.forPath(self.spark, self.persistent_path)
             deltaTable.delete()
         else:
             logger.error("The specified path does not contain a Delta table.")
 
-    
+        
+    def create_delta_table_if_not_exists(self):
+        """
+        Creates a new Delta table if it doesn't exist.
+        Does nothing if the Delta table already exists.
+        """
+        if not DeltaTable.isDeltaTable(self.spark, self.persistent_path):
+            logger.info(f"Delta table not found at {self.persistent_path}. Creating new table.")
+            # Create an empty DataFrame with the correct schema (this is just a placeholder to create the table)
+            empty_df = self.spark.createDataFrame([], "string")  # Empty DataFrame with a generic schema
+            empty_df.write.format("delta").mode("overwrite").save(self.persistent_path)
+            logger.info(f"New Delta table created at {self.persistent_path}")
+        else:
+            logger.info(f"Delta table already exists at {self.persistent_path}. No action taken.")
+                
     def _load_supported_files_to_delta_format(self):
             for subdir, _, files in os.walk(self.temporal_path):
                 for file in files:
@@ -85,7 +100,7 @@ class CreateDataLakeTask(Task):
                         try:
                             # THIS SPARK.READ EXPLODES DUE TO INVALID PATH (Reads my computer path instead of dockers)
                             df = self.spark.read.format(format).load(file_path)
-                            df.write.format("delta").mode("append").save(self.persistent_delta) 
+                            df.write.format("delta").mode("append").save(self.persistent_path) 
                             logger.success(f"[✓] Ingested {file} as {format}")
                         except Exception as e:
                             logger.error(f"[!] Failed to process {file}: {e}")
@@ -110,10 +125,11 @@ class CreateDataLakeTask(Task):
     # and copies blob files into the persistent zone.
     def execute(self):
         self.status = TaskStatus.IN_PROGRESS
+        #self.create_delta_table_if_not_exists()
         self._load_supported_files_to_delta_format()
         self.status = TaskStatus.COMPLETED
         try:
-            df = self.spark.read.format("delta").load(self.persistent_delta)
+            df = self.spark.read.format("delta").load(self.persistent_path)
             logger.info(f"Preview of the Delta Lake table:\n{df.show(truncate=False)}")
         except Exception as e:
             logger.error(f"[!] Could not preview Delta table: {e}")
@@ -122,9 +138,11 @@ class CreateDataLakeTask(Task):
 if __name__ == "__main__":
     print("[*] Running CreateDataLakeTask test...")
     
+    
+    # Reference the paths inside the spark executors to produce any result
     task = CreateDataLakeTask(
-        temporal_path="data_lake/landing/temporal",
-        persistent_path="data_lake/landing/persistent",
+        temporal_path="/tmp/data_lake/temporal",
+        persistent_path="/tmp/data_lake/persistent",
         #spark_master_url="local[*]"
     )
     task.execute()
