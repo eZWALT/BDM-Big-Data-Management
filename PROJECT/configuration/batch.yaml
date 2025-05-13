@@ -8,12 +8,12 @@ producers:
         type: db
         db_type: jsonl-file
         kwargs:
-          file: data_lake/landing/temporal/{topic}/likes.jsonl
+          file: buffer/{topic}/likes.jsonl
       posts_db:
         type: db
         db_type: jsonl-file
         kwargs:
-          file: data_lake/landing/temporal/{topic}/posts.jsonl
+          file: buffer/{topic}/posts.jsonl
   - name: twitter-batch
     py_object: src.ingestion.batch.twitter_batch:TwitterBatchProducer
     kwargs:
@@ -22,7 +22,7 @@ producers:
         type: db
         db_type: jsonl-file
         kwargs:
-          file: data_lake/landing/temporal/{topic}/posts.jsonl
+          file: buffer/{topic}/posts.jsonl
   - name: youtube-batch
     py_object: src.ingestion.batch.youtube_batch:YoutubeBatchProducer
     kwargs:
@@ -32,24 +32,24 @@ producers:
         type: db
         db_type: jsonl-file
         kwargs:
-          file: data_lake/landing/temporal/{topic}/videos.jsonl
+          file: buffer/{topic}/videos.jsonl
       comments_db:
         type: db
         db_type: jsonl-file
         kwargs:
-          file: data_lake/landing/temporal/{topic}/comments.jsonl
+          file: buffer/{topic}/comments.jsonl
       videos_db:
         type: db
         db_type: files
         kwargs:
-          folder: data_lake/landing/temporal/{topic}/videos
+          folder: buffer/{topic}/videos
       thumbnails_db:
         type: db
         db_type: files
         kwargs:
-          folder: data_lake/landing/temporal/{topic}/thumbnails
+          folder: buffer/{topic}/thumbnails
       audios_db:
         type: db
         db_type: files
         kwargs:
-          folder: data_lake/landing/temporal/{topic}/audios
+          folder: buffer/{topic}/audios

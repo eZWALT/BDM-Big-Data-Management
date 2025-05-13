@@ -1,11 +1,5 @@
 from datetime import datetime
-from typing import Generator, List, Optional, Tuple
-
-from pyspark.sql.functions import col
-from delta_lake_script import create_spark_session
-
-from atproto import models
-from loguru import logger
+from typing import Generator, List, Optional
 
 from ..connectors.twitter_client import TweetData, TwitterAPIClient
 from . import BatchProducer, DBConnection
