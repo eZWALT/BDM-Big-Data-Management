@@ -1,0 +1,27 @@
+[
+    {
+        "company_id": "nike",
+        "products": [
+            {
+                "product_name": "Water Jordans",
+                "product_keywords": ["water jordans", "nike jordans"],
+                "tracking_tier": "premium"
+            },
+            {
+                "product_name": "Fake Ass Jordans",
+                "product_keywords": ["fake ass jordans", "fake jordans"],
+                "tracking_tier": "basic"
+            }
+        ]
+    },
+    {
+        "company_id": "microsoft",
+        "products": [
+            {
+                "product_name": "Edge Browser",
+                "product_keywords": ["edge", "bing"],
+                "tracking_tier": "standard"
+            }
+        ]
+    }
+]

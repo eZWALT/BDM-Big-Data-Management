@@ -32,8 +32,8 @@ from src.utils.task import Task
 
 class LoadToLandingTask(Task):
     """
-    Read the contents of the LOCAL source_file, and writes them into a Delta Lake
-    table located at target_table in the SPARK CLUSTER.
+    Read the contents of the LOCAL folders on source_folder as sequential, row-like data, and writes them into a Delta
+    Lake table located at target_table in the SPARK CLUSTER.
     """
 
     def __init__(self, source_folder: str, target_table: str, spark_master_url: str = "local[*]") -> None:

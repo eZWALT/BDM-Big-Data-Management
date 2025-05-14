@@ -5,7 +5,7 @@ import os
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
-from functools import wraps
+from functools import cache, wraps
 from hashlib import sha256
 from re import finditer
 from threading import Thread
@@ -87,6 +87,19 @@ class ProducerConfig(TypedDict):
     kwargs: Optional[dict]
 
 
+@cache
+def load_producer_config(name: str) -> ProducerConfig:
+    """
+    Load a producer configuration from a YAML file.
+    The YAML file should contain a list of producers with their names and configurations.
+    """
+    config = ConfigManager("configuration/batch.yaml")
+    producers = config._load_config()
+    if name not in producers:
+        raise ValueError(f"Producer {name} not found in configuration.")
+    return producers[name]
+
+
 def _load_batch_producer(py_object: str) -> Type[BatchProducer]:
     """
     Load a batch producer class given a string in the following format:
@@ -131,7 +144,7 @@ class BatchProduceTask(Task):
 
     def setup(self):
         self.producer = _load_batch_producer(self._producer_py_object)()
-        self._prepared_kwargs, self._db_connections = _discover_db_connections(
+        self._prepared_kwargs, self._db_connections = discover_db_connections(
             self._producer_kwargs, query_hash=hash_query(self.query)
         )
 
@@ -156,11 +169,14 @@ class DBConnection(ABC):
     """
 
     @abstractmethod
-    def __init__(self, **kwargs):
+    def __init__(self, topic: str, table: str, base_folder: str, **kwargs):
         """
         Initialize the database connection.
         """
-        pass
+        self.topic = topic
+        self.table = table
+        self.base_folder = base_folder
+        self.folder_path = os.path.join(base_folder, topic, table)
 
     @abstractmethod
     def close(self):
@@ -204,17 +220,17 @@ class JSONLFileConnection(DBConnection):
     Class for JSONL database connection.
     """
 
-    def __init__(self, folder: os.PathLike, buffer_size: int = 1024 * 1024):
-        self.folder_path = folder
+    def __init__(self, topic: str, table: str, base_folder: str, buffer_size: int = 1024 * 1024):
+        self.topic = topic
+        self.table = table
+        self.folder_path = os.path.join(base_folder, topic, table)
         os.makedirs(self.folder_path, exist_ok=True)
         self.buffer_size = buffer_size
         self._buffer = io.StringIO()
-        logger.info(f"File {self.folder_path} opened with JSONL format for writing.")
 
     def close(self):
         if self._buffer.tell() > 0:
             self.flush()
-        logger.info(f"File {self.folder_path} closed.")
 
     def add(self, data: dict):
         if not isinstance(data, dict):
@@ -247,9 +263,11 @@ class FilesDBConnection(DBConnection):
     Store files in a directory.
     """
 
-    def __init__(self, folder: os.PathLike):
-        self.folder = folder
-        os.makedirs(self.folder, exist_ok=True)
+    def __init__(self, topic: str, table: str, base_folder: str):
+        self.topic = topic
+        self.table = table
+        self.folder_path = os.path.join(base_folder, topic, table)
+        os.makedirs(self.folder_path, exist_ok=True)
 
     def close(self):
         pass
@@ -262,7 +280,7 @@ class FilesDBConnection(DBConnection):
         if not isinstance(file_data, (io.IOBase)):
             raise ValueError(f"Data must be a file-like object. Found: {type(file_data)}")
         # Write the data to a file in chunks to avoid memory issues
-        with open(os.path.join(self.folder, file_name), "wb") as f:
+        with open(os.path.join(self.folder_path, file_name), "wb") as f:
             while True:
                 chunk = file_data.read(1024 * 1024)
                 if not chunk:
@@ -286,8 +304,10 @@ class NullDatabaseConnection(DBConnection):
     Class for a null database connection.
     """
 
-    def __init__(self, **kwargs):
-        pass
+    def __init__(self, topic: str, table: str, base_folder: str, **kwargs):
+        self.topic = topic
+        self.table = table
+        self.folder_path = os.path.join(base_folder, topic, table)
 
     def close(self):
         pass
@@ -310,7 +330,7 @@ DB_CONN_MAP: dict[str, Type[DBConnection]] = {
 }
 
 
-def _discover_db_connections(kwargs: dict, **placeholder_values: Any) -> dict:
+def discover_db_connections(kwargs: dict, **placeholder_values: Any) -> tuple[dict, list[DBConnection]]:
     """
     Discover and load database connections from the given kwargs.
     This function looks for any kwargs that are dictionaries with a "type" key
@@ -381,7 +401,7 @@ if __name__ == "__main__":
     utc_until = datetime.now(tz=timezone.utc) - timedelta(seconds=11)  # Fucking Twitter API shit (max 17 days, min 10s)
 
     config = ConfigManager("configuration/batch.yaml")
-    producer_configs: List[ProducerConfig] = config._load_config()["producers"]
+    producer_configs: List[ProducerConfig] = list(config._load_config().values())
     tasks: List[BatchProduceTask] = []
     for producer_config in producer_configs:
         for query in queries:
