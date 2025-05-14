@@ -6,23 +6,26 @@ producers:
       likes_batch_size: 100
       likes_db:
         type: db
-        db_type: jsonl-file
+        db_type: jsonl
         kwargs:
-          file: data_lake/landing/temporal/{topic}/likes.jsonl
+          folder: buffer/bluesky-{query_hash}/likes
+          buffer_size: 10240
       posts_db:
         type: db
-        db_type: jsonl-file
+        db_type: jsonl
         kwargs:
-          file: data_lake/landing/temporal/{topic}/posts.jsonl
+          folder: buffer/bluesky-{query_hash}/posts
+          buffer_size: 10240
   - name: twitter-batch
     py_object: src.ingestion.batch.twitter_batch:TwitterBatchProducer
     kwargs:
       posts_batch_size: 100
       posts_db:
         type: db
-        db_type: jsonl-file
+        db_type: jsonl
         kwargs:
-          file: data_lake/landing/temporal/{topic}/posts.jsonl
+          folder: buffer/twitter-{query_hash}/posts
+          buffer_size: 10240
   - name: youtube-batch
     py_object: src.ingestion.batch.youtube_batch:YoutubeBatchProducer
     kwargs:
@@ -30,26 +33,28 @@ producers:
       comments_batch_size: 10
       video_data_db:
         type: db
-        db_type: jsonl-file
+        db_type: jsonl
         kwargs:
-          file: data_lake/landing/temporal/{topic}/videos.jsonl
+          folder: buffer/youtube-{query_hash}/video_metadata
+          buffer_size: 10240
       comments_db:
         type: db
-        db_type: jsonl-file
+        db_type: jsonl
         kwargs:
-          file: data_lake/landing/temporal/{topic}/comments.jsonl
+          folder: buffer/youtube-{query_hash}/comments
+          buffer_size: 10240
       videos_db:
         type: db
         db_type: files
         kwargs:
-          folder: data_lake/landing/temporal/{topic}/videos
+          folder: buffer/youtube-{query_hash}/videos
       thumbnails_db:
         type: db
         db_type: files
         kwargs:
-          folder: data_lake/landing/temporal/{topic}/thumbnails
+          folder: buffer/youtube-{query_hash}/thumbnails
       audios_db:
         type: db
         db_type: files
         kwargs:
-          folder: data_lake/landing/temporal/{topic}/audios
+          folder: buffer/youtube-{query_hash}/audios
