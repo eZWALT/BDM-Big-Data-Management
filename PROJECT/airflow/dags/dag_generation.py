@@ -112,7 +112,7 @@ def create_batch_product_tracking_dag(dag_id: str, product: Product):
                         python_callable=load_to_landing_zone_task,
                         op_kwargs={
                             "source_folder": db.folder_path,
-                            "target_table": os.path.join("dags/data_lake/landing", db.topic, db.table),
+                            "target_table": os.path.join("data_lake/landing", db.topic, db.table),
                         },
                     )
 
