@@ -9,38 +9,54 @@ from .json_reader import read_json
 from .jsonl_reader import read_jsonl
 
 
-def get_reader(folder_path: str) -> Generator[Row, None, None]:
-    """
-    Get the appropriate reader function based on the files inside the folder.
-    """
-    if not os.path.exists(folder_path):
-        raise ValueError(f"Folder not found: {folder_path}")
-    if not os.path.isdir(folder_path):
-        raise ValueError(f"Expected a directory, but found a file: {folder_path}")
-    if not os.listdir(folder_path):
-        raise EmptyError(f"Folder is empty: {folder_path}")
-    ext = os.path.splitext(os.listdir(folder_path)[0])[1]
-    match ext:
-        case ".jsonl":
-            reader = read_jsonl
-        case ".json":
-            reader = read_json
-        case ".csv":
-            reader = read_csv
-        case ".mp4" | ".mp3" | ".jpg":
-            reader = read_blob
-        case _:
-            raise ValueError(f"Unsupported file format: {ext}")
+class Reader:
+    def __init__(self, folder: os.PathLike) -> None:
+        self.folder = folder
+        if not os.path.exists(folder):
+            raise ValueError(f"Folder not found: {folder}")
+        if not os.path.isdir(folder):
+            raise ValueError(f"Expected a directory, but found a file: {folder}")
+        self.files = os.listdir(folder)
+        self.files = [os.path.join(folder, file) for file in self.files]
+        if len(self.files) > 0:
+            ext = os.path.splitext(self.files[0])[1]
+            match ext:
+                case ".jsonl":
+                    self.reader = read_jsonl
+                case ".json":
+                    self.reader = read_json
+                case ".csv":
+                    self.reader = read_csv
+                case ".mp4" | ".mp3" | ".jpg":
+                    self.reader = read_blob
+                case _:
+                    raise ValueError(f"Unsupported file format: {ext}")
+        else:
+            self.reader = None
 
-    for file in os.listdir(folder_path):
-        yield from reader(os.path.join(folder_path, file))
+    def __iter__(self) -> Generator[Row, None, None]:
+        """
+        Iterate over the files in the folder and yield rows from the reader.
+        """
+        for file in self.files:
+            yield from self.reader(file)
 
+    def __len__(self) -> int:
+        """
+        Return the number of files in the folder.
+        """
+        return len(self.files)
 
-class EmptyError(Exception):
-    """
-    Custom exception for empty folders.
-    """
+    def remove_files(self) -> None:
+        """
+        Remove all files in the folder.
+        """
+        for file in self.files:
+            os.remove(file)
+        self.files = []
 
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
-        self.message = message
+    def empty(self) -> bool:
+        """
+        Check if the folder is empty.
+        """
+        return len(self.files) == 0

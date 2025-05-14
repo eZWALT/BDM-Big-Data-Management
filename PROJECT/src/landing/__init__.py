@@ -9,7 +9,7 @@ if __name__ == "__main__":
     sys.path.append(root)
     os.chdir(root)
 
-from src.landing.readers import EmptyError, get_reader
+from src.landing.readers import Reader
 from src.utils.environ import modified_environ
 from src.utils.task import Task
 
@@ -87,15 +87,16 @@ class LoadToLandingTask(Task):
 
     def execute(self):
         self._create_table_if_not_exists()
-        reader = get_reader(self.source_folder)
-        try:
-            data = list(reader)
-        except EmptyError as e:
+        reader = Reader(self.source_folder)
+        if reader.empty():
             logger.warning(f"Empty folder: {self.source_folder}. Skipping...")
             return
-        df = self.spark.createDataFrame(data)
+        df = self.spark.createDataFrame(list(reader))
         df.write.format("delta").mode("append").save(self.target_table)
         logger.success(f"Data written to Delta table at {self.target_table}")
+        logger.info(f"Removing files from {self.source_folder}...")
+        reader.remove_files()
+        logger.success(f"Files removed from {self.source_folder}")
 
 
 if __name__ == "__main__":
