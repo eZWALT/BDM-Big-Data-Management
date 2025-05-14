@@ -33,7 +33,7 @@ x-airflow-common:
 
     # WALTER: This a stupid retarded workaround that should not ever be used please god forgive me 
     # TODO: Luckily this only needs to be done one time , but for the damn 3 airflow containers...
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- numpy==1.26.4 pandas==2.2.3 loguru==0.7.3 pytubefix==8.12.2 SQLAlchemy==1.4.53 pyyaml atproto==0.0.59} #pyspark==3.5.1 delta-spark==3.2.0}
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- numpy==1.26.4 pandas==2.2.3 loguru==0.7.3 pytubefix==8.12.2 SQLAlchemy==1.4.53 pyyaml atproto==0.0.59 pyspark==3.5.1 delta-spark==3.2.0}
     # The following line can be used to set a custom config file, stored in the local config folder
     # If you want to use it, outcomment it and replace airflow.cfg with the name of your config file
     # AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
