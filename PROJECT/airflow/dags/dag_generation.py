@@ -10,7 +10,7 @@ from airflow.operators.python import PythonOperator
 
 from airflow import DAG
 from src.ingestion.batch import BatchProduceTask
-from src.landing.create_data_lake import CreateDataLakeTask
+from src.landing.load_landing_zone import LoadToLandingTask
 from src.utils.company import Company, Product, deserialize_companies_from_json
 
 # ===----------------------------------------------------------------------===#
@@ -96,7 +96,7 @@ def create_landing_zone_data_lake(
     temporal_path: str,
     persistent_path: str,
 ) -> None:
-    task = CreateDataLakeTask(source_file=temporal_path, target_table=persistent_path)
+    task = LoadToLandingTask(source_folder=temporal_path, target_table=persistent_path)
     task.execute()
 
 

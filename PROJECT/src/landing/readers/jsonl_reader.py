@@ -12,8 +12,7 @@ def read_jsonl(file_path: str) -> Generator[Row, None, None]:
         file_path (str): Path to the JSONL file.
 
     Returns:
-        List[Row]: List of Row objects representing the data in the JSONL file.
+        Generator[Row]: List of Row objects representing the data in the JSONL file.
     """
     with open(file_path, "r") as f:
-        data = [Row(**json.loads(line)) for line in f]
-    return data
+        yield from map(lambda line: Row(**json.loads(line)), f)

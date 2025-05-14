@@ -13,9 +13,8 @@ def read_csv(file_path: str) -> Generator[Row, None, None]:
         file_path (str): Path to the CSV file.
 
     Returns:
-        List[Row]: List of Row objects representing the data in the CSV file.
+        Generator[Row]: List of Row objects representing the data in the CSV file.
     """
     with open(file_path, "r") as f:
         reader = DictReader(f)
-        data = [Row(**row) for row in reader]
-    return data
+        yield from map(lambda row: Row(**row), reader)
