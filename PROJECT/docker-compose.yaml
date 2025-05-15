@@ -1,7 +1,7 @@
-include:
-  - airflow-compose.yaml
-  #- kafka-compose.yaml
-  - spark-compose.yaml
+#include:
+#  - airflow-compose.yaml
+#  - kafka-compose.yaml
+#  - spark-compose.yaml
 
 services:
   streamlit-frontend:
@@ -12,6 +12,7 @@ services:
     environment:
       AIRFLOW_USERNAME: ${AIRFLOW_USERNAME}
       AIRFLOW_PASSWORD: ${AIRFLOW_PASSWORD}
+      ENVIRONMENT_TYPE: ${ENVIRONMENT_TYPE}
       STREAM_MANAGER_URL: http://stream-manager:5000
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     networks: 
