@@ -2,21 +2,24 @@ import os
 import streamlit as st
 import pandas as pd
 import duckdb
+from datetime import datetime, timedelta
 import random
 from typing import List
-from datetime import datetime, timedelta
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import torch.nn.functional as F
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import altair as alt
 
-# -------------------------------
-# Sentiment Task
-# -------------------------------
+# --------------------------
+# MODEL CLASS
+# --------------------------
+
 class SentimentAnalysisTask:
     def __init__(self, texts: List[str], model_name: str = "cardiffnlp/twitter-roberta-base-emotion"):
         self.texts = texts
         self.model_name = model_name
+        self.tokenizer = None
+        self.model = None
+        self.labels = None
 
     def setup(self):
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
@@ -39,139 +42,169 @@ class SentimentAnalysisTask:
         return pd.DataFrame(results)
 
 
-# -------------------------------
-# Data Loaders
-# -------------------------------
+# --------------------------
+# DATA LOADING
+# --------------------------
 
-def generate_fake_sentiment_data(n=100, product="ProductX", company="CompanyY"):
-    # This is not dynamic! We need it to be dynamic depending on the model emotions
-    emotions = ['joy', 'sadness', 'optimism', 'anger']
+def generate_fake_sentiment_data(n=100) -> pd.DataFrame:
+    companies = {
+        "OpenAI": ["ChatGPT", "DALL·E"],
+        "Google": ["Gemini", "Bard"],
+        "Meta": ["Threads", "Llama"]
+    }
+    platforms = ["Twitter", "YouTube", "Bluesky"]
+    emotions = {
+        "joy": [
+            "Absolutely love this!", "Best thing ever!", "Super impressed!", "It made my day!"
+        ],
+        "optimism": [
+            "Hope this keeps improving.", "Looking forward to what's next.", "This has potential.", "Very promising!"
+        ],
+        "sadness": [
+            "Really disappointed...", "Let down by this.", "Expected more.", "Not what I hoped for."
+        ],
+        "anger": [
+            "This is awful!", "Really mad about this.", "Total disaster.", "Never using this again!"
+        ]
+    }
+
     base_date = datetime.today()
     data = []
 
     for i in range(n):
-        score = random.uniform(-1, 1)
-        label = random.choice(emotions)
+        company = random.choice(list(companies.keys()))
+        product = random.choice(companies[company])
+        platform = random.choice(platforms)
+        timestamp = base_date - timedelta(days=random.randint(0, 30))
+
+        emotion = random.choice(list(emotions.keys()))
+        emotion_text = random.choice(emotions[emotion])
+        text = f"{emotion_text} It's about {product} by {company}."
+
+        # For development mode sentiment mock
+        score = {
+            "joy": 0.9,
+            "optimism": 0.6,
+            "sadness": -0.6,
+            "anger": -0.9
+        }[emotion]
+
         data.append({
-            "timestamp": (base_date - timedelta(days=random.randint(0, 30))).strftime('%Y-%m-%d'),
-            "text": f"{label.title()} comment {i}",
-            "score": score,
-            "label": label,
+            "timestamp": timestamp,
+            "company": company,
             "product": product,
-            "company": company
+            "platform": platform,
+            "text": text,
+            "score": score,
+            "label": emotion,
+            "num_likes": random.randint(0, 300),
+            "num_comments": random.randint(0, 50)
         })
 
     return pd.DataFrame(data)
 
-def load_sentiment_from_duckdb(path='data/sentiment.duckdb', product=None, company=None) -> pd.DataFrame:
+def load_sentiment_from_duckdb(path='data/sentiment.duckdb') -> pd.DataFrame:
     con = duckdb.connect(path)
-    query = "SELECT timestamp, text, score, label, product, company FROM sentiment"
-    if product and company:
-        query += f" WHERE product='{product}' AND company='{company}'"
-    df = con.execute(query).df()
+    df = con.execute("SELECT timestamp, company, product, platform, text, score, label FROM sentiment").df()
     con.close()
     return df
 
-def load_sentiment_data(environment, product=None, company=None):
-    if environment == "production":
-        return load_sentiment_from_duckdb(product=product, company=company)
-    else:
-        return generate_fake_sentiment_data(product=product, company=company)
+def load_sentiment_data(environment: str) -> pd.DataFrame:
+    return load_sentiment_from_duckdb() if environment == "production" else generate_fake_sentiment_data()
 
 
-# -------------------------------
-# UI + Plots
-# -------------------------------
-
-def render_header():
-    st.set_page_config(page_title="Sentiment Analysis Dashboard", layout="wide")
-    st.title("💬 Sentiment Analysis Dashboard")
-    with st.expander(label="Sentiment Analysis Description:")
-    st.markdown("""
-        This dashboard displays **emotion-based sentiment analysis** for different product–company pairs.
-        The analysis is based on transformer models that detect emotional content (like joy, anger, etc.).
-    """)
+# --------------------------
+# VISUALIZATION
+# --------------------------
 
 def plot_sentiment_over_time(df: pd.DataFrame):
-    chart = alt.Chart(df).mark_line(point=True).encode(
+    import altair as alt
+    st.markdown("Shows how average sentiment changes over time.")
+    chart = alt.Chart(df).mark_line().encode(
         x='timestamp:T',
         y='score:Q',
-        color='label:N'
-    ).properties(width=700, height=400)
+        color='platform:N'
+    ).properties(height=300)
     st.altair_chart(chart, use_container_width=True)
 
-def plot_label_distribution(df: pd.DataFrame):
-    chart = alt.Chart(df).mark_bar().encode(
+def plot_label_distribution(df: pd.DataFrame, label_col="label"):
+    import altair as alt
+    label_df = df[label_col].value_counts().reset_index()
+    label_df.columns = ["label", "count"]
+    chart = alt.Chart(label_df).mark_bar().encode(
         x='label:N',
-        y='count():Q',
+        y='count:Q',
         color='label:N'
-    ).properties(width=400, height=300)
+    ).properties(height=300)
     st.altair_chart(chart, use_container_width=True)
 
-def render_dev_results(product: str, company: str):
-    # Use synthetic data
-    df = generate_fake_sentiment_data(n=100, product=product, company=company)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
 
-    st.subheader("📈 Sentiment Over Time")
-    plot_sentiment_over_time(df)
+# --------------------------
+# MAIN LAYOUT
+# --------------------------
 
-    st.subheader("📊 Emotion Distribution")
-    plot_label_distribution(df)
+def show_layout():
+    st.set_page_config(page_title="Sentiment", layout="wide")
+    st.title("💬 Sentiment Analysis Dashboard")
 
-    st.subheader("🔍 Recent Comments")
-    st.dataframe(df[['timestamp', 'label', 'text']].sort_values(by="timestamp", ascending=False).head(10))
-
-    # (Optional) Small static prediction section using HuggingFace model
-    st.subheader("🧪 Example Model Predictions")
-    example_texts = [
-        "Absolutely loved this product!",
-        "Terrible experience, would not recommend.",
-        "It was okay, nothing special.",
-    ]
-    task = SentimentAnalysisTask(example_texts)
-    df_pred = task.execute()
-    st.dataframe(df_pred)
-
-
-
-def render_main_dashboard(df: pd.DataFrame):
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    st.subheader("📈 Sentiment Over Time")
-    plot_sentiment_over_time(df)
-
-    st.subheader("📊 Emotion Distribution")
-    plot_label_distribution(df)
-
-    st.subheader("🔍 Recent Comments")
-    st.dataframe(df[['timestamp', 'label', 'text']].sort_values(by="timestamp", ascending=False).head(10))
-
-
-# -------------------------------
-# Main App
-# -------------------------------
-
-def main():
-    render_header()
-
-    # Read environment
     environment = os.getenv("ENVIRONMENT_TYPE", "development")
+    df = load_sentiment_data(environment)
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
 
-    # Sidebar controls
-    st.sidebar.title("Configuration")
-    product = st.sidebar.selectbox("Select Product", ["ProductX", "ProductY"])
-    company = st.sidebar.selectbox("Select Company", ["CompanyA", "CompanyB"])
+    # Sidebar filters
+    st.sidebar.header("🔍 Filter Data")
+    selected_company = st.sidebar.selectbox("Select Company", sorted(df["company"].unique()))
+    df = df[df["company"] == selected_company]
 
-    df = load_sentiment_data(environment, product, company)
+    selected_product = st.sidebar.selectbox("Select Product", sorted(df["product"].unique()))
+    df = df[df["product"] == selected_product]
+
+    selected_platforms = st.sidebar.multiselect(
+        "Select Platform(s)", sorted(df["platform"].unique()), default=sorted(df["platform"].unique())
+    )
+    df = df[df["platform"].isin(selected_platforms)]
+
+    # About section
+    with st.expander(f"About this Dashboard"):
+        st.markdown("""
+        This dashboard helps you analyze **sentiment and emotion trends** in user posts related to a specific product/company.
+
+        **Features:**
+        - 📈 Sentiment over time (average score)
+        - 📊 Emotion distribution (labels)
+        - 📝 Recent post sentiment samples
+        - 🧪 Live model prediction (in dev mode only)
+        """)
+
+    # Plots
+    st.subheader("📈 Sentiment Score Over Time")
+    plot_sentiment_over_time(df)
+
+    st.subheader("📊 Emotion Label Distribution")
+    if environment == "development":
+        sample_texts = df["text"].sample(min(10, len(df)), random_state=42).tolist()
+        task = SentimentAnalysisTask(sample_texts)
+        model_df = task.execute()
+        plot_label_distribution(model_df, label_col="predicted_label")
+    else:
+        plot_label_distribution(df, label_col="label")
+
+    st.subheader("🔍 Recent Comments")
+    st.dataframe(df.sort_values(by="timestamp", ascending=False)[
+        ["timestamp", "label", "text"]
+    ].reset_index(drop=True).head(10))
 
     if environment == "development":
-        render_dev_results(product, company)
-    else:
-        render_main_dashboard(df)
+        st.subheader("🧪 Example Model Predictions")
+        st.dataframe(model_df[["text", "predicted_label"]])
 
     st.markdown("---")
-    st.markdown("Built with 🐍 DuckDB + 🤗 Transformers + 📊 Streamlit")
+    st.caption("Built with 🐍 Streamlit + 🤗 Transformers + 🦆 DuckDB")
 
+
+# --------------------------
+# ENTRYPOINT
+# --------------------------
 
 if __name__ == "__main__":
-    main()
+    show_layout()
