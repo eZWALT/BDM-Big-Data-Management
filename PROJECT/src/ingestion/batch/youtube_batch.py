@@ -41,7 +41,7 @@ class YoutubeBatchProducer(BatchProducer):
         stats = self.client.retrieve_video_statistics([video["videoId"] for video in videos])
         for video in videos:
             if video["videoId"] in stats:
-                video["statistics"] = stats[video["videoId"]]
+                video.update(stats[video["videoId"]])
 
     def _fetch_and_update_video_captions(self, videos: List[VideoBasicData]):
         """

@@ -134,7 +134,7 @@ class YoutubeAPIClient:
                 "videoId": item["id"]["videoId"],
                 "channel": item["snippet"]["channelTitle"],
                 "publishedAt": item["snippet"]["publishedAt"],
-                "tags": item["snippet"].get("tags", []),
+                "tags": ",".join(item["snippet"].get("tags", [])),
                 "thumbnail": item["snippet"]["thumbnails"].get("high", {}).get("url", ""),
             }
             for item in posts

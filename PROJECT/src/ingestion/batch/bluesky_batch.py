@@ -123,5 +123,5 @@ class BlueskyBatchProducer(BatchProducer):
             for likes_minibatch, post_uri in self._likes_generator(post_minibatch, batch_size=likes_batch_size):
                 self._load_likes_to_db(likes_minibatch, post_uri, likes_db)
                 total_likes += len(likes_minibatch)
-
+        logger.info(f"Produced {total_posts} posts and {total_likes} likes from the BlueSky API using query '{query}'")
         return total_posts

@@ -38,6 +38,8 @@ class Task(ABC):
     def __init__(self):
         super().__init__()
         self.task_status = TaskStatus.PENDING
+        matches = finditer(".+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)", self.__class__.__name__)
+        self.task_name = " ".join(m.group(0) for m in matches).upper()
 
     @abstractmethod
     def setup(self):
@@ -50,6 +52,12 @@ class Task(ABC):
     def status(self):
         return self.task_status
 
+    def setTaskName(self, name: str):
+        """
+        Set the task name to a custom value.
+        """
+        self.task_name = name
+
     @staticmethod
     def _handle_status(
         func: Callable[Concatenate["Task", P], R],
@@ -57,9 +65,7 @@ class Task(ABC):
         @wraps(func)
         def wrapper(self: "Task", *args: P.args, **kwargs: P.kwargs) -> R:
             # Split the PascalCase class name into words
-            matches = finditer(".+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)", self.__class__.__name__)
-            cls_name = " ".join(m.group(0) for m in matches).upper()
-            logger.info(f"[{cls_name}] Task starting...")
+            logger.info(f"[{self.task_name}] Task starting...")
             self.task_status = TaskStatus.IN_PROGRESS
             start_time = time.time()
             try:
@@ -67,17 +73,17 @@ class Task(ABC):
             except KeyboardInterrupt as e:
                 self.task_status = TaskStatus.CANCELLED
                 end_time = time.time()
-                logger.warning(f"[{cls_name}] Task cancelled after {end_time-start_time:.2f} seconds")
+                logger.warning(f"[{self.task_name}] Task cancelled after {end_time-start_time:.2f} seconds")
                 raise e
             except Exception as e:
                 self.task_status = TaskStatus.FAILED
                 end_time = time.time()
-                logger.error(f"[{cls_name}] Task failed after {end_time-start_time:.2f} seconds: {e}")
+                logger.error(f"[{self.task_name}] Task failed after {end_time-start_time:.2f} seconds: {e}")
                 raise e
             else:
                 self.task_status = TaskStatus.COMPLETED
                 end_time = time.time()
-                logger.success(f"[{cls_name}] Task completed after {end_time - start_time:.2f} seconds")
+                logger.success(f"[{self.task_name}] Task completed after {end_time - start_time:.2f} seconds")
             return result
 
         return wrapper

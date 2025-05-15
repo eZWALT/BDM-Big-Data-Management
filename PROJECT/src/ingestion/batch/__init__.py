@@ -5,7 +5,7 @@ import os
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
-from functools import wraps
+from functools import cache, wraps
 from hashlib import sha256
 from re import finditer
 from threading import Thread
@@ -87,6 +87,19 @@ class ProducerConfig(TypedDict):
     kwargs: Optional[dict]
 
 
+@cache
+def load_producer_config(name: str) -> ProducerConfig:
+    """
+    Load a producer configuration from a YAML file.
+    The YAML file should contain a list of producers with their names and configurations.
+    """
+    config = ConfigManager("configuration/batch.yaml")
+    producers = config._load_config()
+    if name not in producers:
+        raise ValueError(f"Producer {name} not found in configuration.")
+    return producers[name]
+
+
 def _load_batch_producer(py_object: str) -> Type[BatchProducer]:
     """
     Load a batch producer class given a string in the following format:
@@ -100,62 +113,54 @@ def _load_batch_producer(py_object: str) -> Type[BatchProducer]:
     return cls
 
 
+def hash_query(query: str) -> str:
+    """
+    Hash the query using SHA256 and return the first 8 characters.
+    This is used to create a unique identifier for the query.
+    """
+    # Use sha256 to hash the query for a consistent length, and take the first 8 characters
+    return sha256(query.encode("utf-8")).hexdigest()[:8]
+
+
 class BatchProduceTask(Task):
-    def __init__(self):
-        super().__init__()
-        self.config = ConfigManager("configuration/batch.yaml")
-        self.producer_configs: List[ProducerConfig] = self.config._load_config()["producers"]
-        self.batch_producers: Dict[str, Tuple[Type[BatchProducer], dict]] = {}
-
-        for producer_config in self.producer_configs:
-            name = producer_config["name"]
-            if name in self.batch_producers:
-                raise ValueError(f"Duplicate producer name: {name}")
-            self.batch_producers[name] = (
-                _load_batch_producer(producer_config["py_object"]),
-                producer_config.get("kwargs", {}),
-            )
-
-    def setup(self):
-        pass
-
-    @staticmethod
-    def _format_topic(
-        producer_name: str,
+    def __init__(
+        self,
+        producer_config: ProducerConfig,
         query: str,
         utc_since: Optional[datetime] = None,
         utc_until: Optional[datetime] = None,
-    ) -> str:
+    ):
+        super().__init__()
+        self._producer_py_object = producer_config["py_object"]
+        self._producer_name = producer_config["name"]
+        self._producer_kwargs = producer_config.get("kwargs", {})
+        self.query = query
+        self.utc_since = utc_since
+        self.utc_until = utc_until
+
+        self.producer: Optional[BatchProducer] = None
+        self._prepared_kwargs: Optional[dict] = None
+        self._db_connections: Optional[List[DBConnection]] = None
+
+    def setup(self):
+        self.producer = _load_batch_producer(self._producer_py_object)()
+        self._prepared_kwargs, self._db_connections = discover_db_connections(
+            self._producer_kwargs, query_hash=hash_query(self.query)
+        )
+
+    def _flush_db_connections(self):
         """
-        Format the name of the task based on the producer name, database name, and query.
+        Flush all database connections.
         """
-        # Use sha256 to hash the query for a consistent length, and take the first 8 characters
-        query_hash = sha256(query.encode("utf-8")).hexdigest()[:8]
-        utc_until = utc_until or datetime.now(timezone.utc)
-        utc_since = utc_since or datetime(1912, 6, 23, tzinfo=timezone.utc)  # Alan Turing's birthdate (because why not)
-        since_str = utc_since.strftime("%Y%m%d%H%M%S")
-        until_str = utc_until.strftime("%Y%m%d%H%M%S")
-        return f"{producer_name}-{query_hash}-{since_str}-{until_str}"
+        if self._db_connections:
+            for conn in self._db_connections:
+                conn.flush()
+                conn.close()
+            self._db_connections = None
 
-    def execute(self, queries: List[str], utc_since: Optional[datetime] = None, utc_until: Optional[datetime] = None):
-        processes: List[Thread] = []
-        for name, (producer, kwargs) in self.batch_producers.items():
-            for query in queries:
-                topic = self._format_topic(name, query, utc_since, utc_until)
-
-                process = Thread(
-                    target=producer().produce,
-                    args=(query, utc_since, utc_until),
-                    kwargs=_discover_db_connections(kwargs, topic=topic),
-                    name=topic,
-                    daemon=True,
-                )
-                process.start()
-                processes.append(process)
-
-        # Wait for all threads to finish
-        for thread in processes:
-            thread.join()
+    def execute(self):
+        self.producer.produce(self.query, self.utc_since, self.utc_until, **self._prepared_kwargs)
+        self._flush_db_connections()
 
 
 class DBConnection(ABC):
@@ -164,11 +169,14 @@ class DBConnection(ABC):
     """
 
     @abstractmethod
-    def __init__(self, **kwargs):
+    def __init__(self, topic: str, table: str, base_folder: str, **kwargs):
         """
         Initialize the database connection.
         """
-        pass
+        self.topic = topic
+        self.table = table
+        self.base_folder = base_folder
+        self.folder_path = os.path.join(base_folder, topic, table)
 
     @abstractmethod
     def close(self):
@@ -200,59 +208,54 @@ class DBConnection(ABC):
         """
         pass
 
+    def __del__(self):
+        """
+        Destructor for the database connection.
+        """
+        self.close()
+
 
 class JSONLFileConnection(DBConnection):
     """
     Class for JSONL database connection.
     """
 
-    @staticmethod
-    def _requires_file_open(
-        method: Callable[Concatenate["JSONLFileConnection", P], R],
-    ) -> Callable[Concatenate["JSONLFileConnection", P], R]:
-        def wrapper(self: "JSONLFileConnection", *args: P.args, **kwargs: P.kwargs) -> R:
-            if self._file is None:
-                raise ValueError(f"JSONL Database {self.file_path} is not connected.")
-            if not self._file.writable():
-                raise ValueError(f"JSONL Database {self.file_path} is not writable.")
-            if self._file.closed:
-                raise ValueError(f"JSONL Database {self.file_path} is already closed.")
-            if not self._file:
-                raise ValueError(f"JSONL Database {self.file_path} is not open.")
-            return method(self, *args, **kwargs)
+    def __init__(self, topic: str, table: str, base_folder: str, buffer_size: int = 1024 * 1024):
+        self.topic = topic
+        self.table = table
+        self.folder_path = os.path.join(base_folder, topic, table)
+        os.makedirs(self.folder_path, exist_ok=True)
+        self.buffer_size = buffer_size
+        self._buffer = io.StringIO()
 
-        return wrapper
-
-    def __init__(self, file: os.PathLike):
-        self.file_path = file
-        os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
-        if os.path.exists(self.file_path) and not os.path.isfile(self.file_path):
-            raise FileExistsError(f"File {self.file_path} already exists and is not a file.")
-        self._file = open(self.file_path, "a")
-        logger.info(f"File {self.file_path} opened with JSONL format for writing.")
-
-    @_requires_file_open
     def close(self):
-        self._file.close()
-        self._file = None
-        logger.info(f"File {self.file_path} closed.")
+        if self._buffer.tell() > 0:
+            self.flush()
 
-    @_requires_file_open
     def add(self, data: dict):
         if not isinstance(data, dict):
             raise ValueError("Data must be a dictionary.")
-        self._file.write(json.dumps(data) + "\n")
+        self._buffer.write(json.dumps(data) + "\n")
+        if self._buffer.tell() >= self.buffer_size:
+            self.flush()
 
-    @_requires_file_open
     def add_many(self, data: List[dict]):
         if not all(isinstance(d, dict) for d in data):
             raise ValueError("All data entries must be dictionaries.")
         for entry in data:
-            self._file.write(json.dumps(entry) + "\n")
+            self._buffer.write(json.dumps(entry) + "\n")
+            if self._buffer.tell() >= self.buffer_size:
+                self.flush()
 
-    @_requires_file_open
     def flush(self):
-        self._file.flush()
+        if self._buffer.tell() > 0:
+            with open(os.path.join(self.folder_path, f"{int(time.monotonic())}.jsonl"), "a") as f:
+                f.write(self._buffer.getvalue())
+            self._buffer.close()
+            self._buffer = io.StringIO()
+            logger.info(f"Flushed data to {self.folder_path}.")
+        else:
+            logger.warning("Attempted flush of empty buffer, skipping.")
 
 
 class FilesDBConnection(DBConnection):
@@ -260,9 +263,11 @@ class FilesDBConnection(DBConnection):
     Store files in a directory.
     """
 
-    def __init__(self, folder: os.PathLike):
-        self.folder = folder
-        os.makedirs(self.folder, exist_ok=True)
+    def __init__(self, topic: str, table: str, base_folder: str):
+        self.topic = topic
+        self.table = table
+        self.folder_path = os.path.join(base_folder, topic, table)
+        os.makedirs(self.folder_path, exist_ok=True)
 
     def close(self):
         pass
@@ -275,7 +280,7 @@ class FilesDBConnection(DBConnection):
         if not isinstance(file_data, (io.IOBase)):
             raise ValueError(f"Data must be a file-like object. Found: {type(file_data)}")
         # Write the data to a file in chunks to avoid memory issues
-        with open(os.path.join(self.folder, file_name), "wb") as f:
+        with open(os.path.join(self.folder_path, file_name), "wb") as f:
             while True:
                 chunk = file_data.read(1024 * 1024)
                 if not chunk:
@@ -299,8 +304,10 @@ class NullDatabaseConnection(DBConnection):
     Class for a null database connection.
     """
 
-    def __init__(self, **kwargs):
-        pass
+    def __init__(self, topic: str, table: str, base_folder: str, **kwargs):
+        self.topic = topic
+        self.table = table
+        self.folder_path = os.path.join(base_folder, topic, table)
 
     def close(self):
         pass
@@ -317,13 +324,13 @@ class NullDatabaseConnection(DBConnection):
 
 DB_CONN_MAP: dict[str, Type[DBConnection]] = {
     "null": NullDatabaseConnection,
-    "jsonl-file": JSONLFileConnection,
+    "jsonl": JSONLFileConnection,
     "files": FilesDBConnection,
     # Add other database connections here
 }
 
 
-def _discover_db_connections(kwargs: dict, **placeholder_values: Any) -> dict:
+def discover_db_connections(kwargs: dict, **placeholder_values: Any) -> tuple[dict, list[DBConnection]]:
     """
     Discover and load database connections from the given kwargs.
     This function looks for any kwargs that are dictionaries with a "type" key
@@ -376,21 +383,51 @@ def _discover_db_connections(kwargs: dict, **placeholder_values: Any) -> dict:
         return DB_CONN_MAP[db_type](**_replace_placeholders(db_kwargs))
 
     new_kwargs = {}
+    db_connections = []
     for kwarg_name, kwarg_value in kwargs.items():
         if _is_db_connection(kwarg_value):
-            new_kwargs[kwarg_name] = _load_db_connection(kwarg_value)
+            conn = _load_db_connection(kwarg_value)
+            new_kwargs[kwarg_name] = conn
+            db_connections.append(conn)
         else:
             new_kwargs[kwarg_name] = kwarg_value
 
-    return new_kwargs
+    return new_kwargs, db_connections
 
 
 if __name__ == "__main__":
-    # Example usage
-    task = BatchProduceTask()
-    task.execute(
-        ["water jordan"],
-        utc_since=datetime.now(tz=timezone.utc) - timedelta(days=2),
-        utc_until=datetime.now(tz=timezone.utc)
-        - timedelta(seconds=11),  # Fucking Twitter API shit (max 17 days, min 10s)
-    )
+    queries = ["artificial intelligence", "machine learning"]
+    utc_since = datetime.now(tz=timezone.utc) - timedelta(days=2)
+    utc_until = datetime.now(tz=timezone.utc) - timedelta(seconds=11)  # Fucking Twitter API shit (max 17 days, min 10s)
+
+    config = ConfigManager("configuration/batch.yaml")
+    producer_configs: List[ProducerConfig] = list(config._load_config().values())
+    tasks: List[BatchProduceTask] = []
+    for producer_config in producer_configs:
+        for query in queries:
+            task = BatchProduceTask(
+                producer_config=producer_config,
+                query=query,
+                utc_since=utc_since,
+                utc_until=utc_until,
+            )
+            task.setTaskName(f"{producer_config['name']}-{sha256(query.encode('utf-8')).hexdigest()[:8]}")
+            tasks.append(task)
+
+    logger.info("Tasks instantiated, setting them up")
+    for task in tasks:
+        task.setup()
+
+    logger.info("Tasks set up and ready to start. Pushing them to threads.")
+    jobs: List[Thread] = []
+    for task in tasks:
+        thread = Thread(target=task.execute, name=task.task_name, daemon=True)
+        thread.start()
+        jobs.append(thread)
+
+    logger.info("All tasks started, waiting for them to finish.")
+    for job in jobs:
+        job.join()
+        logger.info(f"Task {job.name} finished.")
+    logger.info("All tasks finished.")
+    logger.info("Batch producer test finished.")

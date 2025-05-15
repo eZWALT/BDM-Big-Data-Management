@@ -1,7 +1,6 @@
-#include:
-#  - airflow-compose.yaml
-#  - kafka-compose.yaml
-#  - spark-compose.yaml
+include:
+  - airflow-compose.yaml
+  - kafka-compose.yaml
 
 services:
   streamlit-frontend:
