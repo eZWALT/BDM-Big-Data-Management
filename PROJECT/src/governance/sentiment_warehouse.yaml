@@ -1,0 +1,12 @@
+table: sentiment
+columns:
+  - name: text
+    type: string
+    description: Raw user input text
+  - name: predicted_label
+    type: string
+    description: Emotion prediction from transformer model
+owner: walter
+source: delta/exploitation
+target: consumption/sentiment.duckdb
+updated_at: 2025-05-15

@@ -1,20 +1,23 @@
+import os
+import yaml
 import duckdb
 import pyarrow as pa
+import pandas as pd
 
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import torch.nn.functional as F
-from loguru import logger 
+from loguru import logger
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import udf
+from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import StringType
 
 
 # -------------------------------
-# Load Sentiment Model and Labels
+# Model Loader and UDF Factory
 # -------------------------------
-def load_model(model_name: str = "cardiffnlp/twitter-roberta-base-emotion"):
+def load_model(model_name: str):
     logger.info(f"Loading model and tokenizer: {model_name}")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForSequenceClassification.from_pretrained(model_name)
@@ -23,7 +26,7 @@ def load_model(model_name: str = "cardiffnlp/twitter-roberta-base-emotion"):
     return tokenizer, model, labels
 
 
-def analyze_sentiment_factory(tokenizer, model, labels):
+def create_sentiment_udf(tokenizer, model, labels):
     def analyze_sentiment(text: str) -> str:
         try:
             inputs = tokenizer(text, return_tensors="pt", truncation=True)
@@ -33,60 +36,108 @@ def analyze_sentiment_factory(tokenizer, model, labels):
             label_idx = int(torch.argmax(probs))
             return labels[label_idx]
         except Exception as e:
-            logger.error(f"Error during sentiment analysis for text: {text}. Error: {e}")
+            logger.error(f"Error analyzing text: {text}. Error: {e}")
             return "unknown"
-    return analyze_sentiment
+    return udf(analyze_sentiment, StringType())
 
 
 # -------------------------------
-# Read data from DuckDB
+# Schema Handling for DuckDB Output
 # -------------------------------
-def read_data_from_duckdb(duckdb_path: str, query: str):
-    logger.info(f"Connecting to DuckDB at {duckdb_path}")
+def load_output_schema(schema_path: str):
+    with open(schema_path, "r") as f:
+        meta = yaml.safe_load(f)
+
+    table_name = meta["table"]
+    column_defs = meta["columns"]
+
+    logger.info(f"Loaded output schema for table '{table_name}'")
+    return table_name, column_defs
+
+
+def cast_pandas_df(df: pd.DataFrame, column_defs):
+    dtype_map = {
+        "string": "string",
+        "int": "int64",
+        "float": "float64",
+        "bool": "bool"
+    }
+
+    casted_df = pd.DataFrame()
+
+    for col_def in column_defs:
+        name = col_def["name"]
+        dtype = dtype_map.get(col_def["type"].lower(), "string")
+        if name in df.columns:
+            casted_df[name] = df[name].astype(dtype)
+        else:
+            logger.warning(f"Missing column '{name}' in DataFrame. Filling with None.")
+            casted_df[name] = pd.Series([None] * len(df), dtype=dtype)
+
+    return casted_df
+
+
+def write_to_duckdb(df, duckdb_path: str, schema_path: str):
+    table_name, column_defs = load_output_schema(schema_path)
+    pandas_df = df.toPandas()
+    casted_df = cast_pandas_df(pandas_df, column_defs)
+
     con = duckdb.connect(duckdb_path)
-    arrow_table = con.execute(query).fetch_arrow_table()
+    logger.info(f"Writing to DuckDB table '{table_name}' at {duckdb_path}")
+    con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM casted_df")
     con.close()
-    logger.info("Data loaded from DuckDB")
-    return arrow_table
+    logger.info("Write complete")
 
 
 # -------------------------------
-# Main processing function
+# Spark I/O Helpers
 # -------------------------------
-def main():
-    model_name = "cardiffnlp/twitter-roberta-base-emotion"
-    query = "SELECT text FROM exploitation" # CHANGE THIS
-    input_path = "data/exploitation.duckdb"
-    output_path = "data/sentiment.duckdb"
+def start_spark(app_name: str = "SentimentAnalysisApp") -> SparkSession:
+    logger.info("Starting Spark session")
+    return SparkSession.builder \
+        .appName(app_name) \
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
+        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
+        .getOrCreate()
 
-    # Initialize Spark
-    spark = SparkSession.builder.appName("DistributedSentimentAnalysis").getOrCreate()
-    logger.info("Spark session started")
 
-    # Load model/tokenizer
+def read_from_delta(spark: SparkSession, path: str):
+    logger.info(f"Reading data from Delta Lake: {path}")
+    return spark.read.format("delta").load(path)
+
+
+# -------------------------------
+# Pipeline
+# -------------------------------
+def run_sentiment_pipeline(
+    model_name: str,
+    delta_input_path: str,
+    duckdb_output_path: str,
+    schema_path: str
+):
+    spark = start_spark()
+
     tokenizer, model, labels = load_model(model_name)
+    sentiment_udf = create_sentiment_udf(tokenizer, model, labels)
 
-    # Prepare UDF with closure on model objects
-    sentiment_func = analyze_sentiment_factory(tokenizer, model, labels)
-    sentiment_udf = udf(sentiment_func, StringType())
+    df = read_from_delta(spark, delta_input_path)
+    logger.info(f"Loaded {df.count()} records from Delta")
 
-    # Load data from DuckDB
-    arrow_table = read_data_from_duckdb(input_path, query)
-    df = spark.createDataFrame(arrow_table)
+    df_preds = df.withColumn("predicted_label", sentiment_udf(df["text"]))
 
-    logger.info(f"Dataframe created with {df.count()} rows")
+    write_to_duckdb(df_preds, duckdb_output_path, schema_path)
 
-    # Apply sentiment analysis UDF
-    logger.info("Applying sentiment analysis UDF to dataframe")
-    df_with_sentiment = df.withColumn("predicted_label", sentiment_udf(df["text"]))
-
-    # Save results
-    logger.info(f"Saving results to {output_path}")
-    df_with_sentiment.write.mode("overwrite").parquet(output_path)
-
-    logger.info("Job complete")
     spark.stop()
+    logger.info("Pipeline finished")
 
 
+# -------------------------------
+# Entrypoint
+# -------------------------------
 if __name__ == "__main__":
-    main()
+    run_sentiment_pipeline(
+        model_name="cardiffnlp/twitter-roberta-base-emotion",
+        delta_input_path="delta/exploitation",
+        duckdb_output_path="consumption/sentiment.duckdb",
+        schema_path="governance/sentiment_warehouse.yaml"
+    )

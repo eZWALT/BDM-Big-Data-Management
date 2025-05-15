@@ -1,6 +1,6 @@
-include:
-  - airflow-compose.yaml
-  - kafka-compose.yaml
+#include:
+#  - airflow-compose.yaml
+#  - kafka-compose.yaml
 
 services:
   streamlit-frontend:
