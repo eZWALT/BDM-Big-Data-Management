@@ -6,7 +6,7 @@ from loguru import logger
 
 from src.ingestion.connectors.bluesky_client import BlueSkyAPIClient
 
-from . import BatchProducer, DBConnection
+from . import BatchProducer, TableConnection
 
 # ===-----------------------------------------------------------------------===#
 # BlueSky Batch Producer                                                       #
@@ -20,7 +20,7 @@ class BlueskyBatchProducer(BatchProducer):
         super().__init__()
         self.client = BlueSkyAPIClient()
 
-    def _load_posts_to_db(self, posts: List[models.AppBskyFeedDefs.PostView], db_connection: DBConnection):
+    def _load_posts_to_db(self, posts: List[models.AppBskyFeedDefs.PostView], db_connection: TableConnection):
         """
         Load the given posts into the database.
         """
@@ -43,7 +43,7 @@ class BlueskyBatchProducer(BatchProducer):
         )
 
     def _load_likes_to_db(
-        self, likes: List[models.AppBskyFeedGetLikes.Like], post_uri: str, db_connection: DBConnection
+        self, likes: List[models.AppBskyFeedGetLikes.Like], post_uri: str, db_connection: TableConnection
     ):
         """
         Load the given likes into the database.
@@ -100,8 +100,8 @@ class BlueskyBatchProducer(BatchProducer):
         query: str,
         utc_since: Optional[datetime],
         utc_until: Optional[datetime],
-        posts_db: DBConnection,
-        likes_db: DBConnection,
+        posts_db: TableConnection,
+        likes_db: TableConnection,
         posts_batch_size: int = 100,
         likes_batch_size: int = 100,
     ):

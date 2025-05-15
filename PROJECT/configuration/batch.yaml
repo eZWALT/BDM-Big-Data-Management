@@ -1,78 +1,54 @@
 bluesky:
   name: bluesky-batch
-  py_object: src.ingestion.batch.bluesky_batch:BlueskyBatchProducer
+  producer_type: bluesky
+  tables:
+    likes_db:
+      db_type: jsonl
+      table: buffer/bluesky-{query_hash}/likes
+      kwargs:
+        buffer_size: 10240
+    posts_db:
+      db_type: jsonl
+      table: buffer/bluesky-{query_hash}/posts
+      kwargs:
+        buffer_size: 10240
   kwargs:
     posts_batch_size: 100
     likes_batch_size: 100
-    likes_db:
-      type: db
-      db_type: jsonl
-      kwargs:
-        topic: bluesky-{query_hash}
-        table: likes
-        base_folder: buffer/
-        buffer_size: 10240
-    posts_db:
-      type: db
-      db_type: jsonl
-      kwargs:
-        topic: bluesky-{query_hash}
-        table: posts
-        base_folder: buffer/
-        buffer_size: 10240
 twitter:
   name: twitter-batch
-  py_object: src.ingestion.batch.twitter_batch:TwitterBatchProducer
+  producer_type: twitter
+  tables:
+    posts_db:
+      db_type: jsonl
+      table: buffer/twitter-{query_hash}/posts
+      kwargs:
+        buffer_size: 10240
   kwargs:
     posts_batch_size: 100
-    posts_db:
-      type: db
-      db_type: jsonl
-      kwargs:
-        topic: twitter-{query_hash}
-        table: posts
-        base_folder: buffer/
-        buffer_size: 10240
 youtube:
   name: youtube-batch
-  py_object: src.ingestion.batch.youtube_batch:YoutubeBatchProducer
+  producer_type: youtube
+  tables:
+    video_data_db:
+      db_type: jsonl
+      table: buffer/youtube-{query_hash}/video_metadata
+      kwargs:
+        buffer_size: 10240
+    comments_db:
+      db_type: jsonl
+      table: buffer/youtube-{query_hash}/comments
+      kwargs:
+        buffer_size: 10240
+    videos_db:
+      db_type: blob
+      table: buffer/youtube-{query_hash}/videos
+    thumbnails_db:
+      db_type: blob
+      table: buffer/youtube-{query_hash}/thumbnails
+    audios_db:
+      db_type: blob
+      table: buffer/youtube-{query_hash}/audios
   kwargs:
     videos_batch_size: 1
     comments_batch_size: 10
-    video_data_db:
-      type: db
-      db_type: jsonl
-      kwargs:
-        topic: youtube-{query_hash}
-        table: video_metadata
-        base_folder: buffer/
-        buffer_size: 10240
-    comments_db:
-      type: db
-      db_type: jsonl
-      kwargs:
-        topic: youtube-{query_hash}
-        table: comments
-        base_folder: buffer/
-        buffer_size: 10240
-    videos_db:
-      type: db
-      db_type: files
-      kwargs:
-        topic: youtube-{query_hash}
-        table: videos
-        base_folder: buffer/
-    thumbnails_db:
-      type: db
-      db_type: files
-      kwargs:
-        topic: youtube-{query_hash}
-        table: thumbnails
-        base_folder: buffer/
-    audios_db:
-      type: db
-      db_type: files
-      kwargs:
-        topic: youtube-{query_hash}
-        table: audios
-        base_folder: buffer/

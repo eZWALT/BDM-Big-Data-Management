@@ -8,7 +8,8 @@ from loguru import logger
 from src.ingestion.connectors.models.youtube import VideoBasicData, VideoComment
 from src.ingestion.connectors.youtube_client import YoutubeAPIClient
 
-from . import BatchProducer, DBConnection, FilesDBConnection
+from . import BatchProducer
+from .tables import BlobTableConnection, TableConnection
 
 # ===-----------------------------------------------------------------------===#
 # YouTube Batch Producer                                                       #
@@ -52,8 +53,9 @@ class YoutubeBatchProducer(BatchProducer):
             try:
                 captions_stream = self.client.get_caption_stream(video["videoId"])
             except Exception as e:
-                continue
-            video["captions"] = captions_stream.generate_srt_captions()
+                video["captions"] = None
+            else:
+                video["captions"] = captions_stream.generate_srt_captions()
 
     def _comments_generator(
         self, videos: List[VideoBasicData], batch_size: int = 10
@@ -66,7 +68,7 @@ class YoutubeBatchProducer(BatchProducer):
                 comments, cursor = self.client.retrieve_top_level_comments(video_id, limit=batch_size, cursor=cursor)
                 yield comments
 
-    def _fetch_and_load_thumbnail(self, video: VideoBasicData, db_connection: FilesDBConnection):
+    def _fetch_and_load_thumbnail(self, video: VideoBasicData, db_connection: BlobTableConnection):
         """
         Download the video thumbnail and load it into the database.
         """
@@ -79,7 +81,7 @@ class YoutubeBatchProducer(BatchProducer):
             logger.warning(f"Failed to download thumbnail for video {video['videoId']}: {e}")
             return
 
-    def _fetch_and_load_video(self, video: VideoBasicData, db_connection: FilesDBConnection):
+    def _fetch_and_load_video(self, video: VideoBasicData, db_connection: BlobTableConnection):
         """
         Download the video and load it into the database.
         """
@@ -93,7 +95,7 @@ class YoutubeBatchProducer(BatchProducer):
             logger.warning(f"Failed to download video {video['videoId']}: {e}")
             return
 
-    def _fetch_and_load_audio(self, video: VideoBasicData, db_connection: FilesDBConnection):
+    def _fetch_and_load_audio(self, video: VideoBasicData, db_connection: BlobTableConnection):
         """
         Download the audio and load it into the database.
         """
@@ -114,11 +116,11 @@ class YoutubeBatchProducer(BatchProducer):
         utc_until: Optional[datetime],
         videos_batch_size: int = 10,
         comments_batch_size: int = 10,
-        video_data_db: DBConnection = None,
-        comments_db: DBConnection = None,
-        videos_db: DBConnection = None,
-        audios_db: DBConnection = None,
-        thumbnails_db: DBConnection = None,
+        video_data_db: TableConnection = None,
+        comments_db: TableConnection = None,
+        videos_db: TableConnection = None,
+        audios_db: TableConnection = None,
+        thumbnails_db: TableConnection = None,
     ):
         """
         Produce data from the YouTube API using the provided query.

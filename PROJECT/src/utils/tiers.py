@@ -10,7 +10,7 @@ class Tier:
     """Class representing a tier in the system."""
 
     airflow_dag_args: Dict
-    batch_producers: List[str]
+    social_networks: List[str]
 
 
 @cache

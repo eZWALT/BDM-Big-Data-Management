@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Generator, List, Optional
 
 from ..connectors.twitter_client import TweetData, TwitterAPIClient
-from . import BatchProducer, DBConnection
+from . import BatchProducer, TableConnection
 
 # ===-----------------------------------------------------------------------===#
 # Twitter Batch Producer                                                       #
@@ -16,7 +16,7 @@ class TwitterBatchProducer(BatchProducer):
         super().__init__()
         self.client = TwitterAPIClient()
 
-    def _load_posts_to_db(self, posts: List[TweetData], db_connection: DBConnection):
+    def _load_posts_to_db(self, posts: List[TweetData], db_connection: TableConnection):
         """
         Load the given posts into the database.
         """
@@ -51,7 +51,7 @@ class TwitterBatchProducer(BatchProducer):
         utc_since: Optional[datetime],
         utc_until: Optional[datetime],
         posts_batch_size: int = 100,
-        posts_db: DBConnection = None,
+        posts_db: TableConnection = None,
     ):
         """
         Produce data from the Twitter API using the provided query.

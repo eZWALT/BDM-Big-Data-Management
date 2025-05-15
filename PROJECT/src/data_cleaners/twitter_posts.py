@@ -1,6 +1,9 @@
 """
-Spark application to process the Bluesky likes data from the Landing Layer into
+Spark application to process the Twitter post data from the Landing Layer into
 the Trusted Layer.
+
+WARNING: This should not be used. It is not tested, because the twitter API
+does not work properly.
 """
 
 from pyspark.sql import SparkSession
@@ -10,26 +13,34 @@ from pyspark.sql.window import Window
 
 def main(input_path: str, output_path: str):
     spark = (
-        SparkSession.builder.appName("BlueskyLikesLandingToTrusted")
+        SparkSession.builder.appName("TwitterPostsLandingToTrusted")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
         .getOrCreate()
     )
     df = spark.read.format("delta").load(input_path)
-    # actor_did: str
-    # actor_handle: str
-    # actor_display_name: str
-    # created_at: datetime (str)
-    # post_uri: str
+    # "uri": str
+    # "text": str
+    # "created_at": datetime (str)
+    # "like_count": int
+    # "reply_count": int
+    # "repost_count": int
 
-    # If post_uri, author_did or created_at are not present, drop the row
-    df = df.dropna(subset=["post_uri", "actor_did", "created_at"])
+    # If uri, text or created_at are not present, drop the row
+    df = df.dropna(subset=["uri", "text", "created_at"])
+    # If like_count, repost_count, reply_count are not present, set them to 0
+    df = df.fillna({"like_count": 0, "repost_count": 0, "reply_count": 0})
 
     # Cast created_at to timestamp
     df = df.withColumn("created_at", df["created_at"].cast("timestamp"))
 
-    # If two rows have the same post_uri and actor_did, keep the one with the latest created_at
-    window_spec = Window.partitionBy("post_uri", "actor_did").orderBy(df["created_at"].desc())
+    # Cast like_count, repost_count, reply_count to int
+    df = df.withColumn("like_count", df["like_count"].cast("int"))
+    df = df.withColumn("repost_count", df["repost_count"].cast("int"))
+    df = df.withColumn("reply_count", df["reply_count"].cast("int"))
+
+    # If two rows have the same uri, keep the one with the latest created_at
+    window_spec = Window.partitionBy("uri").orderBy(df["created_at"].desc())
     df = df.withColumn("row_number", row_number().over(window_spec))
     df = df.filter(df["row_number"] == 1).drop("row_number")
 

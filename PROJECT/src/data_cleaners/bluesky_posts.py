@@ -1,6 +1,6 @@
 """
-Spark application to process the Bluesky data from the Landing Layer into the
-Trusted Layer.
+Spark application to process the Bluesky post data from the Landing Layer into
+the Trusted Layer.
 """
 
 from pyspark.sql import SparkSession

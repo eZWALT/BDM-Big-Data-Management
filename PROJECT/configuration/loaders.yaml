@@ -1,0 +1,15 @@
+bluesky:
+  posts:
+    loader_type: jsonl
+    application_args: 
+      input: buffer/bluesky-{query_hash}/posts
+      output: data_lake/landing/bluesky-{query_hash}/posts
+    packages: io.delta:delta-spark_2.12:3.2.0
+  likes:
+    loader_type: jsonl
+    application_args: 
+      input: buffer/bluesky-{query_hash}/likes
+      output: data_lake/landing/bluesky-{query_hash}/likes
+    packages: io.delta:delta-spark_2.12:3.2.0
+twitter:
+youtube:

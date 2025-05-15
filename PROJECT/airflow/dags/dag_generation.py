@@ -4,6 +4,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
+from airflow.operators.python import PythonOperator
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+
+from airflow import DAG
+
 if __name__ == "__main__":
     import os
     import sys
@@ -12,18 +17,11 @@ if __name__ == "__main__":
     sys.path.append(root)
     os.chdir(root)
 
-from airflow.operators.python import PythonOperator
 
-from airflow import DAG
-from src.ingestion.batch import (
-    BatchProduceTask,
-    ProducerConfig,
-    discover_db_connections,
-    hash_query,
-    load_producer_config,
-)
-from src.landing import LoadToLandingTask
+from src.data_loaders import get_data_loader_configs, get_data_loader_script
+from src.ingestion.batch import BatchProduceTask, hash_query, load_producer_config
 from src.utils.company import Company, Product, deserialize_companies_from_json
+from src.utils.placeholders import replace_placeholders
 from src.utils.tiers import get_tier_definition
 
 # ===-----------------------------------------------------------------------===#
@@ -54,22 +52,14 @@ class DAGConfig:
 # ===-----------------------------------------------------------------------===#
 
 
-def batch_produce_task(query: List[str], producer_config: ProducerConfig, hours_since_last_execution: int) -> None:
+def batch_produce_task(query: List[str], social_network: str, hours_since_last_execution: int) -> None:
+    producer_config = load_producer_config(social_network)
     task = BatchProduceTask(
         producer_config=producer_config,
         query=query,
         utc_since=datetime.now(tz=timezone.utc) - timedelta(hours=hours_since_last_execution),
         utc_until=datetime.now(tz=timezone.utc),
     )
-    task.setup()
-    task.execute()
-
-
-def load_to_landing_zone_task(
-    source_folder: str,
-    target_table: str,
-) -> None:
-    task = LoadToLandingTask(source_folder=source_folder, target_table=target_table)
     task.setup()
     task.execute()
 
@@ -94,26 +84,30 @@ def create_batch_product_tracking_dag(dag_id: str, product: Product):
 
     with dag:
         for query in product.keywords:
-            for producer in tier_config.batch_producers:
-                producer_config = load_producer_config(producer)
+            hashed_query = hash_query(query)
+            for social_network in tier_config.social_networks:
                 ingestion_task = PythonOperator(
-                    task_id=f"ingest-{producer}-{hash_query(query)}",
+                    task_id=f"ingest-{social_network}-{hashed_query}",
                     python_callable=batch_produce_task,
                     op_kwargs={
                         "query": query,
-                        "producer_config": producer_config,
+                        "social_network": social_network,
                         "hours_since_last_execution": hours_since_last_execution,
                     },
                 )
-                _, dbs = discover_db_connections(producer_config.get("kwargs", {}), query_hash=hash_query(query))
-                for db in dbs:
-                    load_task = PythonOperator(
-                        task_id=f"load-{db.topic}-{db.table}",
-                        python_callable=load_to_landing_zone_task,
-                        op_kwargs={
-                            "source_folder": db.folder_path,
-                            "target_table": os.path.join("data_lake/landing", db.topic, db.table),
-                        },
+                for loader_id, data_loader_config in get_data_loader_configs(social_network).items():
+                    app_args: List[str] = []
+                    for arg_key, arg_value in data_loader_config["application_args"].items():
+                        # Replace placeholders in the argument value
+                        app_args.append(arg_key)
+                        app_args.append(replace_placeholders(arg_value, query_hash=hashed_query))
+                    load_task = SparkSubmitOperator(
+                        task_id=f"load-{social_network}-{hashed_query}-{loader_id}",
+                        application=get_data_loader_script(data_loader_config["loader_type"]),
+                        conn_id="spark_default",  # Define this connection in Airflow UI
+                        verbose=True,
+                        application_args=app_args,
+                        packages=data_loader_config["packages"],
                     )
 
                     ingestion_task >> load_task
