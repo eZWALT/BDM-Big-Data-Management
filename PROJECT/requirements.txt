@@ -18,3 +18,4 @@ pytest==8.3.5
 pytest-mock==3.14.0
 pytest-dotenv
 minio==7.2.15
+apache-airflow-providers-apache-spark==5.2.1

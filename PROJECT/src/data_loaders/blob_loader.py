@@ -1,5 +1,5 @@
 """
-Spark application to load Binary Large Objects (BLOBs) from a folder into the
+Application to load Binary Large Objects (BLOBs) from a folder into the
 Landing Zone. They won't be cleaned or transformed, just moved from the input
 folder to the output folder.
 
@@ -8,39 +8,45 @@ Args:
     output_path (str): Path to the output folder where the BLOBs will be stored.
 """
 
-from py4j.java_gateway import java_import
-from pyspark.sql import SparkSession
+import os
+
+from minio import Minio
+from minio.commonconfig import CopySource
 
 
-def main(input_path: str, output_path: str):
-    spark = SparkSession.builder.appName("BLOBDataLoader").getOrCreate()
-    # We don't need any special configuration for BLOBs, so we just create a
-    # regular Spark session.
-    sc = spark.sparkContext
+def main(input_path: str, output_path: str, remove: bool = True):
+    """
+    Because we are only moving files from one folder to another, we don't need to
+    use Spark. We can just use the MinIO client to copy the files from one
+    location to another.
 
-    # Import Hadoop FileSystem classes
-    java_import(sc._jvm, "org.apache.hadoop.fs.Path")
-    fs = sc._jvm.org.apache.hadoop.fs.FileSystem.get(sc._jsc.hadoopConfiguration())
+    These movements all happen in the server side, which will be much faster
+    than downloading the files to the client and uploading them again. For that
+    reason, we don't need to use Spark for this operation.
+    """
+    minio = Minio(
+        f"{os.environ['MINIO_HOST']}:{os.environ['MINIO_PORT']}",
+        access_key=os.environ["AWS_ACCESS_KEY"],
+        secret_key=os.environ["AWS_SECRET_KEY"],
+        secure=False,
+    )
+    src_bucket, src_folder = input_path.split("/", 1)
+    dst_bucket, dst_folder = output_path.split("/", 1)
 
-    src_path = sc._jvm.Path(input_path)
-    dst_path = sc._jvm.Path(output_path)
+    print(f"Copying data from bucket={src_bucket},folder={src_folder} to bucket={dst_bucket},folder={dst_folder}")
+    src_files = minio.list_objects(src_bucket, recursive=True, prefix=src_folder)
+    delete_files = []
+    for file in src_files:
+        src_basename = os.path.basename(file.object_name)
+        dst_file = os.path.join(dst_folder, src_basename)
+        print(f"Server-copying file {src_bucket}/{file.object_name} to {dst_bucket}/{dst_file}")
+        minio.copy_object(dst_bucket, dst_file, CopySource(src_bucket, file.object_name))
+        delete_files.append(file.object_name)
 
-    # List files in the source directory
-    files = fs.listStatus(src_path)
-
-    for file_status in files:
-        file_path = file_status.getPath()
-        file_name = file_path.getName()
-        dst_file_path = sc._jvm.Path(dst_path, file_name)
-
-        # Move file (rename in HDFS parlance)
-        success = fs.rename(file_path, dst_file_path)
-        if success:
-            print(f"Moved: {file_path} -> {dst_file_path}")
-        else:
-            print(f"Failed to move: {file_path}")
-
-    spark.stop()
+    if remove:
+        print(f"Removing {len(delete_files)} files")
+        for file in delete_files:
+            minio.remove_object(src_bucket, file)
 
 
 if __name__ == "__main__":

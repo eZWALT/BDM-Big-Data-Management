@@ -2,8 +2,9 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Type
 
+from airflow.models import BaseOperator
 from airflow.operators.python import PythonOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
@@ -18,7 +19,7 @@ if __name__ == "__main__":
     os.chdir(root)
 
 
-from src.data_loaders import get_data_loader_configs, get_data_loader_script
+from src.data_loaders import LoaderConfig, get_data_loader_configs, get_data_loader_script
 from src.ingestion.batch import BatchProduceTask, hash_query, load_producer_config
 from src.utils.company import Company, Product, deserialize_companies_from_json
 from src.utils.placeholders import replace_placeholders
@@ -96,6 +97,7 @@ def create_batch_product_tracking_dag(dag_id: str, product: Product):
                     },
                 )
                 for loader_id, data_loader_config in get_data_loader_configs(social_network).items():
+
                     app_args: List[str] = []
                     for arg_key, arg_value in data_loader_config["application_args"].items():
                         # Replace placeholders in the argument value
@@ -107,9 +109,9 @@ def create_batch_product_tracking_dag(dag_id: str, product: Product):
                         conn_id="spark_default",  # Define this connection in Airflow UI
                         verbose=True,
                         application_args=app_args,
-                        packages=data_loader_config["packages"],
+                        env_vars=replace_placeholders(data_loader_config.get("env_vars", {}), query_hash=hashed_query),
+                        conf=replace_placeholders(data_loader_config.get("conf", {}), query_hash=hashed_query),
                     )
-
                     ingestion_task >> load_task
 
     return dag

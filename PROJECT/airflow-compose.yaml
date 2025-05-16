@@ -17,12 +17,6 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
-    # API related environment variablesai
-    BLUESKY_EMAIL: ${BLUESKY_EMAIL}
-    BLUESKY_PASSWORD: ${BLUESKY_PASSWORD}
-    YOUTUBE_API_KEY: ${YOUTUBE_API_KEY}
-    TWITTER_API_KEY: ${TWITTER_API_KEY}
-
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
     # See https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/check-health.html#scheduler-health-check-server
@@ -33,10 +27,20 @@ x-airflow-common:
 
     # WALTER: This a stupid retarded workaround that should not ever be used please god forgive me 
     # TODO: Luckily this only needs to be done one time , but for the damn 3 airflow containers...
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- numpy==1.26.4 pandas==2.2.3 loguru==0.7.3 pytubefix==8.12.2 SQLAlchemy==1.4.53 pyyaml atproto==0.0.59 pyspark==3.5.1 delta-spark==3.2.0}
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- numpy==1.26.4 pandas==2.2.3 loguru==0.7.3 pytubefix==8.12.2 SQLAlchemy==1.4.53 pyyaml atproto==0.0.59 pyspark==3.5.1 delta-spark==3.2.0 apache-airflow-providers-apache-spark==5.2.1 minio==7.2.15}
     # The following line can be used to set a custom config file, stored in the local config folder
     # If you want to use it, outcomment it and replace airflow.cfg with the name of your config file
     # AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
+
+    # API related environment variables
+    BLUESKY_EMAIL: ${BLUESKY_EMAIL}
+    BLUESKY_PASSWORD: ${BLUESKY_PASSWORD}
+    YOUTUBE_API_KEY: ${YOUTUBE_API_KEY}
+    TWITTER_API_KEY: ${TWITTER_API_KEY}
+    MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+    MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+    MINIO_HOST: ${MINIO_HOST}
+    MINIO_PORT: ${MINIO_PORT}
 
   volumes:
     - ./airflow/dags:/opt/airflow/dags

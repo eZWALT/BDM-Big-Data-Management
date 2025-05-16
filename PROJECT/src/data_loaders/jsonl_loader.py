@@ -8,25 +8,19 @@ Args:
 
 import os
 
-from delta import configure_spark_with_delta_pip
 from pyspark.sql import SparkSession
 
 
 def main(input_path: str, output_path: str):
-    builder = (
-        SparkSession.builder.appName("JSONLDataLoader")
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-    )
-    spark = configure_spark_with_delta_pip(builder).getOrCreate()
-    input_glob = os.path.join(input_path, "*.jsonl")
+    spark = SparkSession.builder.appName("JSONLDataLoader").getOrCreate()
+    input_glob = f"s3a://{input_path}/*.jsonl"
     df = spark.read.json(input_glob)
 
     # We won't perform data cleaning whatsoever, we'll just load it into the
     # Landing Zone.
 
     # Write the DataFrame to the output path in Delta format
-    df.write.format("delta").mode("append").save(output_path)
+    df.write.format("delta").mode("append").save(f"s3a://{output_path}")
     # We use append here because we are accumulating data in the landing zone.
 
     # Empty the input path

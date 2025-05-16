@@ -1,20 +1,21 @@
 import os
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Literal, Optional, TypedDict
 
 from src.utils.config import ConfigManager
 
 
 class LoaderConfig(TypedDict):
+    task_type: Literal["spark", "python"]
     loader_type: str
     application_args: Dict[str, str]
-    packages: Optional[str]
+    env_vars: Optional[Dict[str, str]]
 
 
 def get_data_loader_configs(social_network: str) -> Dict[str, LoaderConfig]:
     """
     Get the dictionary of id:loader_config of loaders for a given social network.
     """
-    config = ConfigManager(config_path="configuration/loaders.yaml")
+    config = ConfigManager(config_path="configuration/loaders.yaml")._load_config()
     if not social_network in config:
         raise ValueError(f"Social network {social_network} not found in configuration.")
     return config[social_network]

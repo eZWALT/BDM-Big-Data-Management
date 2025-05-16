@@ -1,7 +1,13 @@
 ## Setting up MinIO
 
-To set up MinIO, navigate to `localhost:9001` in your browser. This is the MinIO web interface, where you can manage
-your buckets and objects. There, create the following buckets:
+To set up MinIO, navigate to `localhost:9001` in your browser.
+
+To access the MinIO web interface, use the following credentials:
+
+- **Username:** `minioadmin`
+- **Password:** `minioadmin`
+
+This is the MinIO web interface, where you can manage your buckets and objects. There, create the following buckets:
 - `buffer`
 - `landing`
 - `trusted`
