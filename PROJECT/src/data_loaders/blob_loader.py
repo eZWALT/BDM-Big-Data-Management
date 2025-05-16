@@ -14,7 +14,9 @@ from minio import Minio
 from minio.commonconfig import CopySource
 
 
-def main(input_path: str, output_path: str, remove: bool = True):
+def main(
+    input_path: str, output_path: str, minio_host: str, minio_port: str, minio_access_key: str, minio_secret_key: str
+):
     """
     Because we are only moving files from one folder to another, we don't need to
     use Spark. We can just use the MinIO client to copy the files from one
@@ -25,9 +27,9 @@ def main(input_path: str, output_path: str, remove: bool = True):
     reason, we don't need to use Spark for this operation.
     """
     minio = Minio(
-        f"{os.environ['MINIO_HOST']}:{os.environ['MINIO_PORT']}",
-        access_key=os.environ["AWS_ACCESS_KEY"],
-        secret_key=os.environ["AWS_SECRET_KEY"],
+        f"{minio_host}:{minio_port}",
+        access_key=minio_access_key,
+        secret_key=minio_secret_key,
         secure=False,
     )
     src_bucket, src_folder = input_path.split("/", 1)
@@ -43,10 +45,9 @@ def main(input_path: str, output_path: str, remove: bool = True):
         minio.copy_object(dst_bucket, dst_file, CopySource(src_bucket, file.object_name))
         delete_files.append(file.object_name)
 
-    if remove:
-        print(f"Removing {len(delete_files)} files")
-        for file in delete_files:
-            minio.remove_object(src_bucket, file)
+    print(f"Removing {len(delete_files)} files")
+    for file in delete_files:
+        minio.remove_object(src_bucket, file)
 
 
 if __name__ == "__main__":
@@ -55,6 +56,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="Input folder path")
     parser.add_argument("--output", required=False, help="Output folder path")
+    parser.add_argument("--minio_host", required=True, help="MinIO host")
+    parser.add_argument("--minio_port", required=True, help="MinIO port")
+    parser.add_argument("--minio_access_key", required=True, help="MinIO access key")
+    parser.add_argument("--minio_secret_key", required=True, help="MinIO secret key")
 
     args = parser.parse_args()
-    main(args.input, args.output)
+    main(
+        args.input,
+        args.output,
+        args.minio_host,
+        args.minio_port,
+        args.minio_access_key,
+        args.minio_secret_key,
+    )

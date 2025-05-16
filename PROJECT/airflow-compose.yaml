@@ -3,7 +3,7 @@
 
 x-airflow-common:
   &airflow-common
-  image: apache/airflow:2.10.5
+  image: custom-airflow:2.10.5
   build:
     context: .
     dockerfile: Dockerfile.airflow  
@@ -27,9 +27,9 @@ x-airflow-common:
 
     # WALTER: This a stupid retarded workaround that should not ever be used please god forgive me 
     # TODO: Luckily this only needs to be done one time , but for the damn 3 airflow containers...
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- numpy==1.26.4 pandas==2.2.3 loguru==0.7.3 pytubefix==8.12.2 SQLAlchemy==1.4.53 pyyaml atproto==0.0.59 pyspark==3.5.1 delta-spark==3.2.0 apache-airflow-providers-apache-spark==5.2.1 minio==7.2.15}
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- numpy==1.26.4 pandas==2.2.3 loguru==0.7.3 pytubefix==8.12.2 PyYAML==6.0.2 atproto==0.0.59 minio==7.2.15}
     # The following line can be used to set a custom config file, stored in the local config folder
-    # If you want to use it, outcomment it and replace airflow.cfg with the name of your config file
+    # If you want to use it, out comment it and replace airflow.cfg with the name of your config file
     # AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
 
     # API related environment variables
@@ -43,15 +43,10 @@ x-airflow-common:
     MINIO_PORT: ${MINIO_PORT}
 
   volumes:
-    - ./airflow/dags:/opt/airflow/dags
-    - ./airflow/logs:/opt/airflow/logs
-    - ./airflow/config:/opt/airflow/config
-    - ./airflow/plugins:/opt/airflow/plugins
-    - ./airflow/tests:/opt/airflow/tests
+    - airflow-data:/opt/airflow
+    - ./src/airflow/dags:/opt/airflow/dags
     - ./src:/opt/airflow/dags/src                    # Absolute wizardry, lil airflow just put the dags in the bag
     - ./configuration:/opt/airflow/configuration     # Idem, put config inside dags
-    - ./data_lake:/opt/airflow/data_lake
-    - ./buffer:/opt/airflow/buffer
   user: "${AIRFLOW_UID:-5000}:0"
   depends_on:
     &airflow-common-depends-on
@@ -67,7 +62,7 @@ services:
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     volumes:
-      - airflow-postgres-db-volume:/var/lib/postgresql/data
+      - airflow-postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "airflow"]
       interval: 10s
@@ -206,13 +201,9 @@ services:
       _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_PASSWORD:-airflow}
       _PIP_ADDITIONAL_REQUIREMENTS: ''
     user: "0:0"
-    volumes:
-      - ./airflow:/sources
 
 volumes:
-  airflow-postgres-db-volume:
+  airflow-postgres-data:
     driver: local
-    driver_opts:
-      type: none
-      device: ./airflow/postgres
-      o: bind
+  airflow-data:
+    driver: local

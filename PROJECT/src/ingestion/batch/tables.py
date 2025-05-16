@@ -83,7 +83,7 @@ class JSONLTableConnection(TableConnection):
         if self._file is not None:
             self._file.flush()
             self._file.close()
-        self._file = open(os.path.join(self.table, f"{int(time.monotonic())}.jsonl"), "a")
+        self._file = open(os.path.join(self.table, f"{int(time.time())}.jsonl"), "a")
 
     def close(self):
         if self._file is not None:
@@ -166,7 +166,7 @@ class JSONLMinIOTableConnection(TableConnection):
 
     def flush(self):
         if self._buffer.tell() > 0:
-            file_name = f"{int(time.monotonic())}.jsonl"
+            file_name = f"{int(time.time())}.jsonl"
             self.minio_client.put_object(
                 bucket_name=self.bucket_name,
                 object_name=os.path.join(self.folder_path, file_name),

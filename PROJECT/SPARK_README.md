@@ -15,6 +15,42 @@ This is the MinIO web interface, where you can manage your buckets and objects. 
 Then, create a new access and secret key pair by navigating th the access keys tab on the left side of the screen.
 Make sure to copy the access and secret keys, as you will need them later.
 
+## Setting up Apache Airflow to use Spark
+
+Remember to set the following environment variables in your terminal before running the docker compose command:
+
+```bash
+export MINO_HOST=minio
+export MINIO_PORT=9000
+export MINIO_SECRET_KEY=<your_minio_secret_key
+export MINIO_ACCESS_KEY=<your_minio_access_key>
+```
+
+Then, run the docker compose command to start the Airflow server:
+
+```bash
+docker-compose up -d
+```
+
+If you want to run only the Airflow and spark containers, you can run the following commands:
+
+```bash
+docker-compose -f airflow-compose.yaml up -d
+docker-compose -f spark-compose.yaml up -d
+```
+
+Then, navigate to `localhost:8080` in your browser to access the Airflow web interface.
+You should see several DAGs listed there. Before running any of them, make sure to navigate to the `Admin` tab and then to the `Connections` tab. There, you should see create a new connection with the following parameters:
+- **Connection Id:** `spark_default`
+- **Connection Type:** `Spark`
+- **Host:** `spark://spark-master`
+- **Port:** `7077`
+- **Deploy mode:** `client`
+
+The rest should be left as is, but check the following:
+- **Spark binary:** `spark-submit`
+
+
 ## Interacting with MinIO + Delta Lake from you local machine
 
 For use with delta:
@@ -32,8 +68,13 @@ Set the following environment variables in your terminal:
 export MINIO_HOST=localhost
 export MINIO_PORT=9000
 export AWS_SECRET_KEY=<your_minio_secret_key>
+export MINIO_SECRET_KEY=<your_minio_secret_key>
 export AWS_ACCESS_KEY=<your_minio_access_key>
+export MINIO_ACCESS_KEY=<your_minio_access_key>
 ```
+
+> [!NOTE]
+> We duplicate the access and secret keys, because the spark connectors will search for the `AWS_ACCESS_KEY` and `AWS_SECRET_KEY` environment variables, while the rest of the code is prepared using the `MINIO_` prefix.
 
 Then, run the following command to start `pyspark` with the necessary configurations:
 

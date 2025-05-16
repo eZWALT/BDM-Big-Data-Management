@@ -34,7 +34,6 @@ def replace_placeholders(object: Any, **placeholder_values: Any) -> Any:
 
         def _get_from_vars(match):
             key = match.group(1)
-            print(placeholder_values)
             if key not in placeholder_values:
                 default_value = match.group(2)
                 if default_value is None:
