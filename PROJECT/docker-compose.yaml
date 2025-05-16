@@ -1,6 +1,7 @@
 include:
   - airflow-compose.yaml
   - kafka-compose.yaml
+  - spark-compose.yaml
 
 services:
   streamlit-frontend:
@@ -20,6 +21,7 @@ services:
       - 9999:9999
     working_dir: /app 
     restart: unless-stopped
+
 
 networks:
   bigdata_network:
