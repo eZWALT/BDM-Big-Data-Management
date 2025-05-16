@@ -3,15 +3,21 @@ bluesky:
   producer_type: bluesky
   tables:
     likes_db:
-      db_type: jsonl
+      db_type: jsonl-minio
       table: buffer/bluesky-{query_hash}/likes
       kwargs:
         buffer_size: 10240
+        minio_access_key: ${MINIO_ACCESS_KEY}
+        minio_secret_key: ${MINIO_SECRET_KEY}
+        minio_endpoint: ${MINIO_HOST|localhost}:${MINIO_PORT|9000}
     posts_db:
-      db_type: jsonl
+      db_type: jsonl-minio
       table: buffer/bluesky-{query_hash}/posts
       kwargs:
         buffer_size: 10240
+        minio_access_key: ${MINIO_ACCESS_KEY}
+        minio_secret_key: ${MINIO_SECRET_KEY}
+        minio_endpoint: ${MINIO_HOST|localhost}:${MINIO_PORT|9000}
   kwargs:
     posts_batch_size: 100
     likes_batch_size: 100
@@ -20,10 +26,13 @@ twitter:
   producer_type: twitter
   tables:
     posts_db:
-      db_type: jsonl
+      db_type: jsonl-minio
       table: buffer/twitter-{query_hash}/posts
       kwargs:
         buffer_size: 10240
+        minio_access_key: ${MINIO_ACCESS_KEY}
+        minio_secret_key: ${MINIO_SECRET_KEY}
+        minio_endpoint: ${MINIO_HOST|localhost}:${MINIO_PORT|9000}
   kwargs:
     posts_batch_size: 100
 youtube:
@@ -31,24 +40,42 @@ youtube:
   producer_type: youtube
   tables:
     video_data_db:
-      db_type: jsonl
+      db_type: jsonl-minio
       table: buffer/youtube-{query_hash}/video_metadata
       kwargs:
         buffer_size: 10240
+        minio_access_key: ${MINIO_ACCESS_KEY}
+        minio_secret_key: ${MINIO_SECRET_KEY}
+        minio_endpoint: ${MINIO_HOST|localhost}:${MINIO_PORT|9000}
     comments_db:
-      db_type: jsonl
+      db_type: jsonl-minio
       table: buffer/youtube-{query_hash}/comments
       kwargs:
         buffer_size: 10240
+        minio_access_key: ${MINIO_ACCESS_KEY}
+        minio_secret_key: ${MINIO_SECRET_KEY}
+        minio_endpoint: ${MINIO_HOST|localhost}:${MINIO_PORT|9000}
     videos_db:
-      db_type: blob
+      db_type: blob-minio
       table: buffer/youtube-{query_hash}/videos
+      kwargs:
+        minio_access_key: ${MINIO_ACCESS_KEY}
+        minio_secret_key: ${MINIO_SECRET_KEY}
+        minio_endpoint: ${MINIO_HOST|localhost}:${MINIO_PORT|9000}
     thumbnails_db:
-      db_type: blob
+      db_type: blob-minio
       table: buffer/youtube-{query_hash}/thumbnails
+      kwargs:
+        minio_access_key: ${MINIO_ACCESS_KEY}
+        minio_secret_key: ${MINIO_SECRET_KEY}
+        minio_endpoint: ${MINIO_HOST|localhost}:${MINIO_PORT|9000}
     audios_db:
-      db_type: blob
+      db_type: blob-minio
       table: buffer/youtube-{query_hash}/audios
+      kwargs:
+        minio_access_key: ${MINIO_ACCESS_KEY}
+        minio_secret_key: ${MINIO_SECRET_KEY}
+        minio_endpoint: ${MINIO_HOST|localhost}:${MINIO_PORT|9000}
   kwargs:
     videos_batch_size: 1
     comments_batch_size: 10

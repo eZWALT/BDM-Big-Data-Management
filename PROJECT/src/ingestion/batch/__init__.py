@@ -144,8 +144,8 @@ class BatchProduceTask(Task):
         """
         if self._table_connections is not None:
             for conn in self._table_connections.values():
-                conn.flush()
-                conn.close()
+                if not conn.is_closed():
+                    conn.close()
             self._table_connections = None
 
     def execute(self):
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     utc_since = datetime.now(tz=timezone.utc) - timedelta(hours=1)
     utc_until = datetime.now(tz=timezone.utc) - timedelta(seconds=11)  # Fucking Twitter API shit (max 17 days, min 10s)
 
-    social_networks = ("bluesky",)  # "youtube", "twitter")
+    social_networks = ("bluesky", "youtube")  # "youtube", "twitter")
 
     config = ConfigManager("configuration/batch.yaml")
     producer_configs: Dict[str, ProducerConfig] = config._load_config()

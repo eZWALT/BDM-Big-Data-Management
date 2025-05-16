@@ -3,13 +3,49 @@ bluesky:
     loader_type: jsonl
     application_args: 
       input: buffer/bluesky-{query_hash}/posts
-      output: data_lake/landing/bluesky-{query_hash}/posts
+      output: landing/bluesky-{query_hash}/posts
     packages: io.delta:delta-spark_2.12:3.2.0
   likes:
     loader_type: jsonl
     application_args: 
       input: buffer/bluesky-{query_hash}/likes
-      output: data_lake/landing/bluesky-{query_hash}/likes
+      output: landing/bluesky-{query_hash}/likes
     packages: io.delta:delta-spark_2.12:3.2.0
 twitter:
+  posts:
+    loader_type: jsonl
+    application_args: 
+      input: buffer/twitter-{query_hash}/posts
+      output: landing/twitter-{query_hash}/posts
+    packages: io.delta:delta-spark_2.12:3.2.0
 youtube:
+  video_metadata:
+    loader_type: jsonl
+    application_args: 
+      input: buffer/youtube-{query_hash}/video_metadata
+      output: landing/youtube-{query_hash}/video_metadata
+    packages: io.delta:delta-spark_2.12:3.2.0
+  comments:
+    loader_type: jsonl
+    application_args: 
+      input: buffer/youtube-{query_hash}/comments
+      output: landing/youtube-{query_hash}/comments
+    packages: io.delta:delta-spark_2.12:3.2.0
+  audios:
+    loader_type: blob
+    application_args: 
+      input: buffer/youtube-{query_hash}/audios
+      output: landing/youtube-{query_hash}/audios
+    packages: io.delta:delta-spark_2.12:3.2.0
+  videos:
+    loader_type: blob
+    application_args: 
+      input: buffer/youtube-{query_hash}/videos
+      output: landing/youtube-{query_hash}/videos
+    packages: io.delta:delta-spark_2.12:3.2.0
+  thumbnails:
+    loader_type: blob
+    application_args: 
+      input: buffer/youtube-{query_hash}/thumbnails
+      output: landing/youtube-{query_hash}/thumbnails
+    packages: io.delta:delta-spark_2.12:3.2.0

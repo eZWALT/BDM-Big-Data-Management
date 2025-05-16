@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from typing import *
 
 from loguru import logger
+from minio import Minio
 
 from src.utils.placeholders import replace_placeholders
 
@@ -55,7 +56,15 @@ class TableConnection(ABC):
         """
         Destructor for the database connection.
         """
-        self.close()
+        if not self.is_closed():
+            self.close()
+
+    @abstractmethod
+    def is_closed(self) -> bool:
+        """
+        Check if the database connection is closed.
+        """
+        return self.table is None
 
 
 class JSONLTableConnection(TableConnection):
@@ -105,6 +114,81 @@ class JSONLTableConnection(TableConnection):
         if self._file.tell() > 0:
             self._file.flush()
 
+    def is_closed(self) -> bool:
+        """
+        Check if the database connection is closed.
+        """
+        return self._file is None or self._file.closed
+
+
+class JSONLMinIOTableConnection(TableConnection):
+    """
+    Class for JSONL database connection with minio.
+    """
+
+    def __init__(
+        self,
+        table: str,
+        buffer_size: int = 1024 * 1024,
+        minio_endpoint: str = "localhost:9000",
+        minio_access_key: str = None,
+        minio_secret_key: str = None,
+    ):
+        self.table = table
+        self.buffer_size = buffer_size
+
+        self.minio_client = Minio(
+            minio_endpoint, access_key=minio_access_key, secret_key=minio_secret_key, secure=False
+        )
+        self.bucket_name, self.folder_path = table.split("/", 1)
+        if not self.minio_client.bucket_exists(self.bucket_name):
+            self.minio_client.make_bucket(self.bucket_name)
+            logger.info(f"Created bucket {self.bucket_name} in MinIO.")
+        else:
+            logger.info(f"Bucket {self.bucket_name} already exists in MinIO.")
+
+        self._buffer = io.StringIO()
+
+    def add(self, data: dict):
+        if not isinstance(data, dict):
+            raise ValueError("Data must be a dictionary.")
+        self._buffer.write(json.dumps(data) + "\n")
+        if self._buffer.tell() >= self.buffer_size:
+            self.flush()
+
+    def add_many(self, data: List[dict]):
+        if not all(isinstance(d, dict) for d in data):
+            raise ValueError("All data entries must be dictionaries.")
+        for entry in data:
+            self._buffer.write(json.dumps(entry) + "\n")
+            if self._buffer.tell() >= self.buffer_size:
+                self.flush()
+
+    def flush(self):
+        if self._buffer.tell() > 0:
+            file_name = f"{int(time.monotonic())}.jsonl"
+            self.minio_client.put_object(
+                bucket_name=self.bucket_name,
+                object_name=os.path.join(self.folder_path, file_name),
+                data=io.BytesIO(self._buffer.getvalue().encode("utf-8")),
+                length=self._buffer.tell(),
+            )
+            self._buffer.close()
+            self._buffer = io.StringIO()
+            logger.info(f"Flushed data to MinIO bucket {self.table}/{file_name}.")
+
+    def close(self):
+        if self._buffer.tell() > 0:
+            self.flush()
+        self._buffer.close()
+        logger.info(f"Closed JSONL file connection for {self.table}/{self.table}.")
+
+    def is_closed(self) -> bool:
+        """
+        Check if the database connection is closed.
+        """
+        return self._buffer.closed
+
 
 class BlobTableConnection(TableConnection):
     """
@@ -144,6 +228,79 @@ class BlobTableConnection(TableConnection):
     def flush(self):
         pass
 
+    def is_closed(self) -> bool:
+        """
+        Check if the database connection is closed.
+        """
+        return self.table is None or not os.path.exists(self.table)
+
+
+class BlobMinIOTableConnection(TableConnection):
+    """
+    Store files in a MinIO bucket.
+    """
+
+    def __init__(
+        self,
+        table: str,
+        minio_endpoint: str = "localhost:9000",
+        minio_access_key: str = None,
+        minio_secret_key: str = None,
+    ):
+        self.table = table
+
+        self.minio_client = Minio(
+            minio_endpoint, access_key=minio_access_key, secret_key=minio_secret_key, secure=False
+        )
+        self.bucket_name, self.folder_path = table.split("/", 1)
+        if not self.minio_client.bucket_exists(self.bucket_name):
+            self.minio_client.make_bucket(self.bucket_name)
+            logger.info(f"Created bucket {self.bucket_name} in MinIO.")
+        else:
+            logger.info(f"Bucket {self.bucket_name} already exists in MinIO.")
+
+    def add(self, data: Tuple[str, IO]):
+        """
+        Add a file to the database.
+        """
+        file_name, file_data = data
+        if not isinstance(file_data, (io.IOBase)):
+            raise ValueError(f"Data must be a file-like object. Found: {type(file_data)}")
+        # Write the data to a file in chunks to avoid memory issues
+        self.minio_client.put_object(
+            bucket_name=self.bucket_name,
+            object_name=os.path.join(self.folder_path, file_name),
+            data=file_data,
+            length=-1,
+            part_size=10 * 1024 * 1024,
+        )
+
+    def add_many(self, data: List[Any]):
+        """
+        Add multiple files to the database.
+        """
+        for file_name, file_data in data:
+            self.add((file_name, file_data))
+
+    def flush(self):
+        """
+        Flush the data in the bucket to the database.
+        If no bucket is specified, flush all connections.
+        """
+        pass
+
+    def close(self):
+        """
+        Close the database connection.
+        """
+        pass
+
+    def is_closed(self) -> bool:
+        """
+        Check if the database connection is closed.
+        """
+        return self.table is None or not self.minio_client.bucket_exists(self.bucket_name)
+
 
 class NullTableConnection(TableConnection):
     """
@@ -165,11 +322,19 @@ class NullTableConnection(TableConnection):
     def flush(self):
         pass
 
+    def is_closed(self) -> bool:
+        """
+        Check if the database connection is closed.
+        """
+        return False
+
 
 DB_CONN_MAP: dict[str, Type[TableConnection]] = {
     "null": NullTableConnection,
     "jsonl": JSONLTableConnection,
     "blob": BlobTableConnection,
+    "jsonl-minio": JSONLMinIOTableConnection,
+    "blob-minio": BlobMinIOTableConnection,
     # Add other database connections here
 }
 
@@ -190,9 +355,9 @@ def connect_table(table_config: TableConnectionConfig, **placeholder_values: Any
     if db_type not in DB_CONN_MAP:
         raise ValueError(f"Database type {db_type} is not supported.")
 
-    db_table = replace_placeholders(db_table)
+    db_table = replace_placeholders(db_table, **placeholder_values)
 
-    return DB_CONN_MAP[db_type](table=db_table, **replace_placeholders(db_kwargs))
+    return DB_CONN_MAP[db_type](table=db_table, **replace_placeholders(db_kwargs, **placeholder_values))
 
 
 def connect_tables(
