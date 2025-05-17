@@ -142,8 +142,20 @@ following web pages should be available:
 - **Apache Airflow**: `http://localhost:8080`
 - **Apache Kafka**: `http://localhost:8082`
 - **Apache Spark**: `http://localhost:8090`
+- **Spark Notebook**: `http://localhost:8888`
 - **MinIO**: `http://localhost:9001`
 - **Streamlit**: `http://localhost:9999`
+
+> [!NOTE]
+> The Spark Notebook is a Jupyter notebook that is configured inside the network
+> to be able to access the MinIO storage properly from inside the spark cluster.
+> Otherwise, if you try to submit jobs from your local machine, given that the 
+> url for the MinIO storage is different from the one inside the cluster 
+> (`localhost:9000` vs `minio:9000`), it will not work.
+
+> [!IMPORTANT]
+> If you want to use the Notebook, you will need to take a look at the container
+> logs to find the token to access the notebook.
 
 Finally, you will need to create a connection in Airflow to connect to the Spark
 cluster. To do this, go to the [Airflow web interface](http://localhost:8080),
