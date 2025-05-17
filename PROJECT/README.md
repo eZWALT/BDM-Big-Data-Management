@@ -168,27 +168,6 @@ The rest should be left as is, check the following:
 And, after that, you should be able to run the DAGs in Airflow. You can do this
 by navigating to the `DAGs` tab and clicking on the `Trigger DAG` button. This
 will start the DAG.
-
-## TODO 
-
-For the 1st part of the project, the following tasks must be completed:
-
-- [x] Everybody do their BatchProducerTask (ETL)             (Marc)
-- [x] Finalize the streaming (just landing)                  (Marc, Walter)
-- [x] Add functionality to the streamlit (landing zone page) (Walter)
-- [x] Debug & test dynamic dags (Airflow)                    (Walter)
-- [x] Test Docker compose (Everything tighted up)            (Marc, Mateja)
-- [ ] Get delta table folder working                         (Mateja)
-- [ ] Automatize delta lake (dag) and put it in docker?      (Mateja, Walter)
-- [ ] Writing the final report                               (Mateja, Marc, Walter)
-- [ ] Fixing relative paths in airflow (data_lake)           (Walter)
-
-
-2nd part 
-
-- [ ] Create new data (KPIS) (exploitation)
-- [ ] Create embeddings (exploitation)????
-
  
 ## Credits
 
