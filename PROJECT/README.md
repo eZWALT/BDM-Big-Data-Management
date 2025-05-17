@@ -169,49 +169,8 @@ And, after that, you should be able to run the DAGs in Airflow. You can do this
 by navigating to the `DAGs` tab and clicking on the `Trigger DAG` button. This
 will start the DAG.
 
-### Dockerized execution
-
-You can run this project either by setting up the environment locally or using Docker. For simplicity docker compose setup is showcased:
-
-```sh
-docker-compose up -d
-```
-
-The basic structure of this docker compose server is the following, bearing in mind that they share a storage device (through different volumes) and a bridge network:
-1. Apache Airflow: Orchestrator that depends on PostgreSQL
-2. PostgreSQL
-3. Kafka: Streaming ingestor that depends on ZooKeeper
-4. ZooKeeper
-5. Spark Master: 1 master
-6. Spark Workers: up to N workers
-7. Streamlit frontend
-
-### Social Media API's
-
-> Note that you will need several API keys to fully utilize the infrastructure of this project
-
-1. Twitter/X 
-2. Bluesky
-3. Youtube 
-
-## Testing suite
-
-### Project 
-To contribute to our test-driven development, we continiously produce unit tests, which can be executed inside the docker environment using the following command from the base project path:
-
-```sh
-PYTHONPATH=. pytest tests/
-```
-
-### Airflow
-
-Notice that also DAG tests can be found in `airflow/tests` in order to verify the correct working of airflow.
-
-```sh
-PYTHONPATH=. pytest airflow/tests/
-```
-
 ## TODO 
+
 For the 1st part of the project, the following tasks must be completed:
 
 - [x] Everybody do their BatchProducerTask (ETL)             (Marc)
