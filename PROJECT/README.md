@@ -132,6 +132,10 @@ Then, you can run the following command to start the rest of the containers:
 docker compose up -d --build
 ```
 
+> [!NOTE]
+> This command takes a long time to run (around 20 minutes) the first time
+> you run it. Go grab a coffee or something while you wait.
+
 After some minutes, you should have all the containers up and running. The 
 following web pages should be available:
 
