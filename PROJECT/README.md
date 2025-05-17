@@ -146,8 +146,13 @@ following web pages should be available:
 - **Streamlit**: `http://localhost:9999`
 
 Finally, you will need to create a connection in Airflow to connect to the Spark
-cluster. To do this, go to the [Airflow web interface](http://localhost:8080)
-and navigate to the `Admin` -> `Connections` tab. There, create a new connection
+cluster. To do this, go to the [Airflow web interface](http://localhost:8080),
+enter the following credentials:
+
+- **Username:** `airflow`
+- **Password:** `airflow`
+
+And navigate to the `Admin` -> `Connections` tab. There, create a new connection
 with the following parameters:
 
 - **Connection Id:** `spark_default`
