@@ -39,9 +39,23 @@ This topic is still a work-in-progress section:
 In order to fully utilize this project, there is several software and access to private apis you will need, as described in the following sections. To guarantee the ease of execution/portability of this project you will need:
 
 - Docker Compose                   (Mandatory) 
-- Set up a .env file / environment variables (API keys and information, Airflow authentification (use defualt values airflow/airflow))(Mandatory)
+- Set up a .env file / environment variables (API keys and information, development/production, Airflow authentification (use defualt values airflow/airflow))(Mandatory). The format is specified below
 - Java (To execute spark locally)  (Optional) --> aditionally create a HOST_IP environment variable with your IPv4
 - Python 3.11 (To execute locally) (Optional)
+
+The format of the .env file used in order to execute the whole project:
+
+```bash 
+TWITTER_API_KEY=...
+YOUTUBE_API_KEY=...
+BLUESKY_USERNAME=...
+BLUESKY_PASSWORD=...
+BLUESKY_EMAIL=...
+AIRFLOW_USERNAME=airflow
+AIRFLOW_PASSWORD=airflow
+ENVIRONMENT_TYPE=production  # Note that it can also be "development"
+
+```
 
 Note: To execute pyspark on the driver node (your pc/laptop) you will need to install java and set the java_home environment variable and have python 3.11
 
@@ -101,13 +115,11 @@ For the 1st part of the project, the following tasks must be completed:
 - [ ] Fixing relative paths in airflow (data_lake)           (Walter)
 
 
-For the 2nd part of the project, the following tasks must be completed:
+2nd part 
 
-- [ ] TRUSTED ZONE 
-- [ ] Create Streaming Explotitation zone
-- [ ] Ideate 2 Small Easy Exploitation tasks
-- [ ] Update the frontend accordingly
-- [ ] Update the airflow dags accordingly 
+- [ ] Create new data (KPIS) (exploitation)
+- [ ] Create embeddings (exploitation)????
+
  
 ## Credits
 

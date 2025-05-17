@@ -16,6 +16,9 @@ atproto==0.0.59
 aiokafka==0.12.0
 pytest==8.3.5
 pytest-mock==3.14.0
-pytest-dotenv
 minio==7.2.15
 apache-airflow-providers-apache-spark==5.2.1
+pytest-dotenv==0.5.2
+transformers==4.51.3
+torch==2.7.0
+duckdb==1.2.2
