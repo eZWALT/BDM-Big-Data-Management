@@ -1,63 +1,164 @@
 # VibeRadar 
 
-## Description 
-
-VibeRadar provides real-time and historical long-term analysis of product impressions across social media, helping companies understand public sentiment, track engagement, and optimize marketing strategies.
+VibeRadar provides real-time and historical long-term analysis of product 
+impressions across social media, helping companies understand public sentiment, 
+track engagement, and optimize marketing strategies.
 
 ## Contents
 
-- **docker-compose.yaml**: Contains the whole software set-up and configuration of the different needed processes. (Split into 3 YAML docker compose files). There is a custom dockerfile for setting up the Python-Streamlit image for the frontend
+- **\*-compose.yaml**: Files that contain the setup for the software and its 
+  configuration. This is split into several files for each family of components
+  (e.g. airflow, kafka, spark, etc.) The main one, and the one tha should be
+  used to run the project is `docker-compose.yaml`
 - **requirements.txt**: Python main base requirements 
-- **airflow/**: Airflow related contents and scripts with automatic dag generation
 - **configuration/**: Configuration files for all the project 
-- **data_lake/**: Persistent data target directory to set up the local data lake 
-- **frontend/**: Streamlit front-end for the project data management and analytics/dashboarding
-- **spark/**: Spark related configurations, scripts and other (WIP)
-- **src/**: Main source code of the project divided into 4 high level zones (Ingestion, Landing, Trusted, Exploitation)
-- **tests/**: Unit tests of the source code to sanity check the project
+- **frontend/**: Streamlit front-end for the project data management and 
+  analytics/dashboarding
+- **src/**: Main source code of the project divided into 4 high level zones 
+  (Ingestion, Landing, Trusted, Exploitation)
+- **tests/**: Some unit tests for the project, as well as other scripts for
+  testing the different components of the project
 
+## Architectural design & tech stack
 
-## Architectural desing & tech stack
+The following tech stack has been designed solely using open source big data
+solutions:
 
-The following tech stack has been used solely using open source big data solutions:
-
-## Tech Stack
-This topic is still a work-in-progress section:
-
-- **Python**
-- **Docker** 
-- **Apache Kafka**
-- **Apache ZooKeeper**
-- **DeltaLake**
-- **Apache Spark**
-- **Apache Airflow**
-- **Streamlit**
-
+- **Python** as the general scripting language.
+- **Docker** as the containerization tool.
+- **Apache Kafka** as the streaming data pipeline.
+- **MinIO** as the object storage.
+- **DeltaLake** as the storage layer between spark and the object storage.
+- **Apache Spark** as the distributed data processing engine for batch data.
+- **Apache Airflow** as the orchestrator of the data pipeline.
+- **Streamlit** as the front-end framework for the project.
+- **PostgreSQL** as the metadata storage for Airflow.
+- **DuckDB** as the analytical database.
 
 ## Usage
 
-In order to fully utilize this project, there is several software and access to private apis you will need, as described in the following sections. To guarantee the ease of execution/portability of this project you will need:
+In order to fully utilize this project, there is several software and access to
+private APIs you will need, as described in the following sections. To guarantee
+the ease of execution/portability of this project you will need to have Docker
+installed.
 
-- Docker Compose                   (Mandatory) 
-- Set up a .env file / environment variables (API keys and information, development/production, Airflow authentification (use defualt values airflow/airflow))(Mandatory). The format is specified below
-- Java (To execute spark locally)  (Optional) --> aditionally create a HOST_IP environment variable with your IPv4
-- Python 3.11 (To execute locally) (Optional)
+Previous to running anything, you will need to get the following API keys:
+
+1. **Twitter/X**: You will need to create a developer account and create an app
+   in order to get the API keys.
+2. **YouTube**: You will need to create a developer account and create an app
+   in order to get the API keys.
+3. **Bluesky**: You will need to create an account.
+
+We recommend storing the following API keys in a `.env` file in the root of the
+project, although this file will not be used in the containers, it will be
+useful to keep track of everything.
 
 The format of the .env file used in order to execute the whole project:
 
 ```bash 
 TWITTER_API_KEY=...
 YOUTUBE_API_KEY=...
-BLUESKY_USERNAME=...
 BLUESKY_PASSWORD=...
 BLUESKY_EMAIL=...
-AIRFLOW_USERNAME=airflow
-AIRFLOW_PASSWORD=airflow
-ENVIRONMENT_TYPE=production  # Note that it can also be "development"
-
 ```
 
-Note: To execute pyspark on the driver node (your pc/laptop) you will need to install java and set the java_home environment variable and have python 3.11
+### Running the project the first time
+
+The first time you run the project, be sure to NOT run the `docker-compose up -d`
+command, as this will create ALL the images and containers, but we first want to
+create the MinIO storage container, to get the credentials from there.
+
+```sh
+docker compose -f minio-compose.yaml up -d
+```
+
+This will spin up the MinIO container, which will be available at
+`http://localhost:9000`. You can access the MinIO console using
+`http://localhost:9001`.
+
+The default credentials for the MinIO console are:
+- **Username:** `minioadmin`
+- **Password:** `minioadmin`
+
+Once it is up and running, you should access the MinIO console
+(`http://localhost:9001`) and navigate to the `Access Keys` tab on the left side
+of the screen. There, you should create a new access and secret key pair. Name
+it something informative, such as "Data Pipeline Key". Make sure to copy
+these keys to the `.env` file you created earlier:
+
+```bash
+MINIO_ACCESS_KEY=...
+MINIO_SECRET_KEY=...
+```
+
+While you are at it, add the following environment variables to the `.env` file:
+
+```bash
+MINIO_HOST=minio
+MINIO_PORT=9000
+```
+
+Then, back in the MinIO console, go to the `Buckets` tab and create the following
+buckets:
+- `buffer` - This will hold the data in arbitrary format before being ingested
+    into the landing zone.
+- `landing` - This will hold the data in either BLOB or Parquet (Delta) format,
+    before being cleaned and processed by further tasks.
+- `trusted` - This will hold data that was taken from the landing zone, de-duplicated
+    and cleaned. This data is ready to be used for further processing.
+- `exploitation` - This will hold data grouped by the different products that 
+    are being analyzed. This data is ready to be analyzed by NLP and other
+    techniques.
+
+Then, and only once you have done all the previous steps, you can start the rest
+of the containers. To do so, be sure to first export all the environment variables
+from the `.env` file to your shell. You can do this by running the following
+command in the root of the project:
+
+```sh
+export $(cat .env | xargs)
+```
+
+> [!NOTE]
+> Make sure that the variables are set by running the following command:
+> ```sh
+> env | grep MINIO
+> ```
+
+Then, you can run the following command to start the rest of the containers:
+
+```sh
+docker compose up -d --build
+```
+
+After some minutes, you should have all the containers up and running. The 
+following web pages should be available:
+
+- **Apache Airflow**: `http://localhost:8080`
+- **Apache Kafka**: `http://localhost:8082`
+- **Apache Spark**: `http://localhost:8090`
+- **MinIO**: `http://localhost:9001`
+- **Streamlit**: `http://localhost:9999`
+
+Finally, you will need to create a connection in Airflow to connect to the Spark
+cluster. To do this, go to the [Airflow web interface](http://localhost:8080)
+and navigate to the `Admin` -> `Connections` tab. There, create a new connection
+with the following parameters:
+
+- **Connection Id:** `spark_default`
+- **Connection Type:** `Spark`
+- **Host:** `spark://spark-master`
+- **Port:** `7077`
+- **Deploy mode:** `client`
+
+The rest should be left as is, check the following:
+
+- **Spark binary:** `spark-submit`
+
+And, after that, you should be able to run the DAGs in Airflow. You can do this
+by navigating to the `DAGs` tab and clicking on the `Trigger DAG` button. This
+will start the DAG.
 
 ### Dockerized execution
 
