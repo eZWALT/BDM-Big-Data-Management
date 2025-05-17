@@ -1,0 +1,16 @@
+topics:
+  bluesky: trusted/bluesky-{query_hash}
+  twitter: trusted/twitter-{query_hash}
+  youtube: trusted/youtube-{query_hash}
+conf:
+    spark.jars.packages: "org.apache.hadoop:hadoop-aws:3.3.1,io.delta:delta-spark_2.12:3.2.0"
+    spark.sql.extensions: "io.delta.sql.DeltaSparkSessionExtension"
+    spark.sql.catalog.spark_catalog: "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+    spark.executorEnv.AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+    spark.executorEnv.AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+    spark.hadoop.fs.s3a.endpoint: http://${MINIO_HOST}:${MINIO_PORT}
+    spark.hadoop.fs.s3a.path.style.access: "true"
+env_vars:
+  AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+  AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+output_dir: trusted/{company_id}/{product_id}
