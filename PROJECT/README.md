@@ -159,10 +159,10 @@ with the following parameters:
 - **Connection Type:** `Spark`
 - **Host:** `spark://spark-master`
 - **Port:** `7077`
-- **Deploy mode:** `client`
 
 The rest should be left as is, check the following:
 
+- **Deploy mode:** `client`
 - **Spark binary:** `spark-submit`
 
 And, after that, you should be able to run the DAGs in Airflow. You can do this
