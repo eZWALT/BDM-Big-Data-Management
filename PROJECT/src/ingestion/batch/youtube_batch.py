@@ -41,8 +41,19 @@ class YoutubeBatchProducer(BatchProducer):
         """
         stats = self.client.retrieve_video_statistics([video["videoId"] for video in videos])
         for video in videos:
-            if video["videoId"] in stats:
-                video.update(stats[video["videoId"]])
+            if not video["videoId"] in stats:
+                logger.warning(f"Video {video['videoId']} not found in stats")
+                video["viewCount"] = None
+                video["likeCount"] = None
+                video["commentCount"] = None
+                video["duration"] = None
+                video["definition"] = None
+            else:
+                video["viewCount"] = stats[video["videoId"]]["viewCount"]
+                video["likeCount"] = stats[video["videoId"]]["likeCount"]
+                video["commentCount"] = stats[video["videoId"]]["commentCount"]
+                video["duration"] = stats[video["videoId"]]["duration"]
+                video["definition"] = stats[video["videoId"]]["definition"]
 
     def _fetch_and_update_video_captions(self, videos: List[VideoBasicData]):
         """

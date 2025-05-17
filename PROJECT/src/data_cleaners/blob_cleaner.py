@@ -45,10 +45,6 @@ def main(
         minio.copy_object(dst_bucket, dst_file, CopySource(src_bucket, file.object_name))
         delete_files.append(file.object_name)
 
-    print(f"Removing {len(delete_files)} files")
-    for file in delete_files:
-        minio.remove_object(src_bucket, file)
-
 
 if __name__ == "__main__":
     import argparse

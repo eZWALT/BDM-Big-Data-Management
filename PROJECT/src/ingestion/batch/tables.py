@@ -2,6 +2,7 @@ import io
 import json
 import os
 import time
+import uuid
 from abc import ABC, abstractmethod
 from typing import *
 
@@ -83,7 +84,7 @@ class JSONLTableConnection(TableConnection):
         if self._file is not None:
             self._file.flush()
             self._file.close()
-        self._file = open(os.path.join(self.table, f"{int(time.time())}.jsonl"), "a")
+        self._file = open(os.path.join(self.table, f"{uuid.uuid1()}.jsonl"), "a")
 
     def close(self):
         if self._file is not None:
@@ -166,7 +167,7 @@ class JSONLMinIOTableConnection(TableConnection):
 
     def flush(self):
         if self._buffer.tell() > 0:
-            file_name = f"{int(time.time())}.jsonl"
+            file_name = f"{uuid.uuid1()}.jsonl"
             self.minio_client.put_object(
                 bucket_name=self.bucket_name,
                 object_name=os.path.join(self.folder_path, file_name),

@@ -27,10 +27,14 @@ x-airflow-common:
 
     # WALTER: This a stupid retarded workaround that should not ever be used please god forgive me 
     # TODO: Luckily this only needs to be done one time , but for the damn 3 airflow containers...
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- numpy==1.26.4 pandas==2.2.3 loguru==0.7.3 pytubefix==8.12.2 PyYAML==6.0.2 atproto==0.0.59 minio==7.2.15}
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- loguru==0.7.3 pytubefix==8.12.2 PyYAML==6.0.2 atproto==0.0.59 minio==7.2.15}
     # The following line can be used to set a custom config file, stored in the local config folder
     # If you want to use it, out comment it and replace airflow.cfg with the name of your config file
     # AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
+
+    # These parameters are only here because we are using a small docker deployment, instead of a real cluster
+    AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: 1
+    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: 1
 
     # API related environment variables
     BLUESKY_EMAIL: ${BLUESKY_EMAIL}

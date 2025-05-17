@@ -5,8 +5,8 @@ from src.utils.config import ConfigManager
 
 
 class LoaderConfig(TypedDict):
-    task_type: Literal["spark", "python"]
     loader_type: str
+    py_files: Optional[str]
     application_args: Dict[str, str]
     env_vars: Optional[Dict[str, str]]
     conf: Optional[Dict[str, str]]

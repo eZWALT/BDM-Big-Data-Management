@@ -22,7 +22,10 @@ def main(
     # zone anyway. What we don't want is to delete files that we haven't read yet.
     minio = Minio(f"{minio_host}:{minio_port}", access_key=minio_access_key, secret_key=minio_secret_key, secure=False)
     src_bucket, src_folder = input_path.split("/", 1)
-    src_files = minio.list_objects(src_bucket, recursive=True, prefix=src_folder)
+    src_files = list(minio.list_objects(src_bucket, recursive=True, prefix=src_folder))
+    if len(src_files) == 0:
+        print(f"No files found in {input_path}")
+        return
 
     df = spark.read.json(input_glob)
 

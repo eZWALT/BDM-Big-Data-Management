@@ -1,0 +1,122 @@
+bluesky:
+  posts:
+    cleaner_type: bluesky-posts
+    conf:
+        spark.jars.packages: "org.apache.hadoop:hadoop-aws:3.3.1,io.delta:delta-spark_2.12:3.2.0"
+        spark.sql.extensions: "io.delta.sql.DeltaSparkSessionExtension"
+        spark.sql.catalog.spark_catalog: "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+        spark.executorEnv.AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+        spark.executorEnv.AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+        spark.hadoop.fs.s3a.endpoint: http://${MINIO_HOST}:${MINIO_PORT}
+        spark.hadoop.fs.s3a.path.style.access: "true"
+    env_vars:
+      AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+    application_args: 
+      input: landing/bluesky-{query_hash}/posts
+      output: trusted/bluesky-{query_hash}/posts
+  likes:
+    cleaner_type: bluesky-likes
+    conf:
+        spark.jars.packages: "org.apache.hadoop:hadoop-aws:3.3.1,io.delta:delta-spark_2.12:3.2.0"
+        spark.sql.extensions: "io.delta.sql.DeltaSparkSessionExtension"
+        spark.sql.catalog.spark_catalog: "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+        spark.executorEnv.AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+        spark.executorEnv.AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+        spark.hadoop.fs.s3a.endpoint: http://${MINIO_HOST}:${MINIO_PORT}
+        spark.hadoop.fs.s3a.path.style.access: "true"
+    env_vars:
+      AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+    application_args: 
+      input: landing/bluesky-{query_hash}/likes
+      output: trusted/bluesky-{query_hash}/likes
+twitter:
+  posts:
+    cleaner_type: twitter-posts
+    conf:
+        spark.jars.packages: "org.apache.hadoop:hadoop-aws:3.3.1,io.delta:delta-spark_2.12:3.2.0"
+        spark.sql.extensions: "io.delta.sql.DeltaSparkSessionExtension"
+        spark.sql.catalog.spark_catalog: "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+        spark.executorEnv.AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+        spark.executorEnv.AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+        spark.hadoop.fs.s3a.endpoint: http://${MINIO_HOST}:${MINIO_PORT}
+        spark.hadoop.fs.s3a.path.style.access: "true"
+    env_vars:
+      AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+    application_args: 
+      input: landing/twitter-{query_hash}/posts
+      output: trusted/twitter-{query_hash}/posts
+youtube:
+  video_metadata:
+    cleaner_type: youtube-video-metadata
+    conf:
+        spark.jars.packages: "org.apache.hadoop:hadoop-aws:3.3.1,io.delta:delta-spark_2.12:3.2.0"
+        spark.sql.extensions: "io.delta.sql.DeltaSparkSessionExtension"
+        spark.sql.catalog.spark_catalog: "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+        spark.executorEnv.AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+        spark.executorEnv.AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+        spark.hadoop.fs.s3a.endpoint: http://${MINIO_HOST}:${MINIO_PORT}
+        spark.hadoop.fs.s3a.path.style.access: "true"
+    env_vars:
+      AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+    application_args: 
+      input: landing/youtube-{query_hash}/video_metadata
+      output: trusted/youtube-{query_hash}/video_metadata
+  comments:
+    cleaner_type: youtube-comments
+    conf:
+        spark.jars.packages: "org.apache.hadoop:hadoop-aws:3.3.1,io.delta:delta-spark_2.12:3.2.0"
+        spark.sql.extensions: "io.delta.sql.DeltaSparkSessionExtension"
+        spark.sql.catalog.spark_catalog: "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+        spark.executorEnv.AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+        spark.executorEnv.AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+        spark.hadoop.fs.s3a.endpoint: http://${MINIO_HOST}:${MINIO_PORT}
+        spark.hadoop.fs.s3a.path.style.access: "true"
+    env_vars:
+      AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+    application_args: 
+      input: landing/youtube-{query_hash}/comments
+      output: trusted/youtube-{query_hash}/comments
+  audios:
+    cleaner_type: blob
+    py_files: dags/libs/minio_libs.zip
+    env_vars:
+      AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+    application_args: 
+      input: landing/youtube-{query_hash}/audios
+      output: trusted/youtube-{query_hash}/audios
+      minio_access_key: ${MINIO_ACCESS_KEY}
+      minio_secret_key: ${MINIO_SECRET_KEY}
+      minio_host: ${MINIO_HOST}
+      minio_port: ${MINIO_PORT}
+  videos:
+    cleaner_type: blob
+    py_files: dags/libs/minio_libs.zip
+    env_vars:
+      AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+    application_args: 
+      input: landing/youtube-{query_hash}/videos
+      output: trusted/youtube-{query_hash}/videos
+      minio_access_key: ${MINIO_ACCESS_KEY}
+      minio_secret_key: ${MINIO_SECRET_KEY}
+      minio_host: ${MINIO_HOST}
+      minio_port: ${MINIO_PORT}
+  thumbnails:
+    cleaner_type: blob
+    py_files: dags/libs/minio_libs.zip
+    env_vars:
+      AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+    application_args: 
+      input: landing/youtube-{query_hash}/thumbnails
+      output: trusted/youtube-{query_hash}/thumbnails
+      minio_access_key: ${MINIO_ACCESS_KEY}
+      minio_secret_key: ${MINIO_SECRET_KEY}
+      minio_host: ${MINIO_HOST}
+      minio_port: ${MINIO_PORT}

@@ -9,13 +9,8 @@ from pyspark.sql.window import Window
 
 
 def main(input_path: str, output_path: str):
-    spark = (
-        SparkSession.builder.appName("BlueskyPostsLandingToTrusted")
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-        .getOrCreate()
-    )
-    df = spark.read.format("delta").load(input_path)
+    spark = SparkSession.builder.appName("BlueskyPostsCleaner").getOrCreate()
+    df = spark.read.format("delta").load(f"s3a://{input_path}")
     # uri: str
     # text: str
     # created_at: datetime (str)
@@ -47,7 +42,7 @@ def main(input_path: str, output_path: str):
     df = df.filter(df["row_number"] == 1).drop("row_number")
 
     # Write the DataFrame to the output path in Delta format
-    df.write.format("delta").mode("overwrite").save(output_path)
+    df.write.format("delta").mode("overwrite").save(f"s3a://{output_path}")
 
 
 if __name__ == "__main__":

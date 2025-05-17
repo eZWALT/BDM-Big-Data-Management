@@ -19,6 +19,7 @@ if __name__ == "__main__":
     os.chdir(root)
 
 
+from src.data_cleaners import get_data_cleaner_configs, get_data_cleaner_script
 from src.data_loaders import LoaderConfig, get_data_loader_configs, get_data_loader_script
 from src.ingestion.batch import BatchProduceTask, hash_query, load_producer_config
 from src.utils.company import Company, Product, deserialize_companies_from_json
@@ -62,7 +63,12 @@ def batch_produce_task(query: List[str], social_network: str, hours_since_last_e
         utc_until=datetime.now(tz=timezone.utc),
     )
     task.setup()
-    task.execute()
+    try:
+        task.execute()
+    except Exception as e:
+        # We don't care if this fails, we want the rest of the DAG to run
+        print(f"Batch produce task failed for query {query} on {social_network}: {e}")
+        pass
 
 
 def create_batch_product_tracking_dag(dag_id: str, product: Product):
@@ -96,24 +102,55 @@ def create_batch_product_tracking_dag(dag_id: str, product: Product):
                         "hours_since_last_execution": hours_since_last_execution,
                     },
                 )
-                for loader_id, data_loader_config in get_data_loader_configs(social_network).items():
+                data_loaders = get_data_loader_configs(social_network)
+                data_cleaners = get_data_cleaner_configs(social_network)
+
+                if not set(data_loaders.keys()) == set(data_cleaners.keys()):
+                    raise ValueError(
+                        f"Data loaders and data cleaners for {social_network} do not match. "
+                        f"Data loaders: {data_loaders.keys()}, Data cleaners: {data_cleaners.keys()}"
+                    )
+
+                for loader_cleaner_id in data_loaders.keys():
+                    data_loader_config = data_loaders[loader_cleaner_id]
+                    data_cleaner_config = data_cleaners[loader_cleaner_id]
 
                     app_args: List[str] = []
                     for arg_key, arg_value in data_loader_config["application_args"].items():
                         # Replace placeholders in the argument value
                         app_args.append(f"--{arg_key}")
                         app_args.append(replace_placeholders(arg_value, query_hash=hashed_query))
-                    load_task = SparkSubmitOperator(
-                        task_id=f"load-{social_network}-{hashed_query}-{loader_id}",
+                    loader_task = SparkSubmitOperator(
+                        task_id=f"load-{social_network}-{hashed_query}-{loader_cleaner_id}",
                         application=get_data_loader_script(data_loader_config["loader_type"]),
                         conn_id="spark_default",  # Define this connection in Airflow UI
+                        name=f"load-{social_network}-{hashed_query}-{loader_cleaner_id}",
                         verbose=True,
                         application_args=app_args,
                         conf=replace_placeholders(data_loader_config.get("conf", {}), query_hash=hashed_query),
                         py_files=replace_placeholders(data_loader_config.get("py_files", []), query_hash=hashed_query),
                         env_vars=replace_placeholders(data_loader_config.get("env_vars", {}), query_hash=hashed_query),
                     )
-                    ingestion_task >> load_task
+                    ingestion_task >> loader_task
+
+                    # Add data cleaner task
+                    app_args: List[str] = []
+                    for arg_key, arg_value in data_cleaner_config["application_args"].items():
+                        # Replace placeholders in the argument value
+                        app_args.append(f"--{arg_key}")
+                        app_args.append(replace_placeholders(arg_value, query_hash=hashed_query))
+                    cleaner_task = SparkSubmitOperator(
+                        task_id=f"clean-{social_network}-{hashed_query}-{loader_cleaner_id}",
+                        application=get_data_cleaner_script(data_cleaner_config["cleaner_type"]),
+                        conn_id="spark_default",  # Define this connection in Airflow UI
+                        name=f"clean-{social_network}-{hashed_query}-{loader_cleaner_id}",
+                        verbose=True,
+                        application_args=app_args,
+                        conf=replace_placeholders(data_cleaner_config.get("conf", {}), query_hash=hashed_query),
+                        py_files=replace_placeholders(data_cleaner_config.get("py_files", []), query_hash=hashed_query),
+                        env_vars=replace_placeholders(data_cleaner_config.get("env_vars", {}), query_hash=hashed_query),
+                    )
+                    loader_task >> cleaner_task
 
     return dag
 
