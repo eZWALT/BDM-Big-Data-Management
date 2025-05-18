@@ -1,6 +1,6 @@
 basic:
   airflow_dag_args:
-    schedule: "@monthly"
+    schedule: "@daily"
     catchup: False
   social_networks:
     - bluesky
