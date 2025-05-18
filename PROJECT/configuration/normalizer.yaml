@@ -13,7 +13,7 @@ conf:
 env_vars:
   AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
   AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
-output_dir: trusted/{company_id}/{product_id}
+output_dir: exploitation/{company_id}/{product_id}
 py_files: dags/libs/minio_libs.zip
 application_args:
   minio_access_key: ${MINIO_ACCESS_KEY}

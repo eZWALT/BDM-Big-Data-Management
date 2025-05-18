@@ -297,7 +297,7 @@ def main(
     combined_df = combined_df.withColumn("extraction_id", lit(current_timestamp()))
 
     # Write the DataFrame to the output path in Delta format
-    combined_df.write.format("delta").mode("append").save(f"s3a://{output_path}")
+    combined_df.write.format("delta").mode("append").save(f"s3a://{output_path}/data")
 
 
 if __name__ == "__main__":
