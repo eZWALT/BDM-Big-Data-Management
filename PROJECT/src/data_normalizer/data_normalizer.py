@@ -21,13 +21,14 @@ process all the tables inside a topic, knowing that they all have the correct
 schema, defined in the data_cleaners module.
 
 The schema of the output table has the following columns:
+- extraction_id (int): The date and time when the data was extracted.
 - source (str): The name of the social network it came from (e.g., "bluesky").
 - uri (str): The URI of the post within the same social network. (Note: to get
     an absolute URI, we need to join it with the social network domain).
 - created_at (datetime): The date and time when the post was created.
-- author_uri (Optional[str]): The URI of the author of the post within the same social
-    network. (Note: to get an absolute URI, we need to join it with the social
-    network domain).
+- author_uri (Optional[str]): The URI of the author of the post within the same
+    social network. (Note: to get an absolute URI, we need to join it with the
+    social network domain).
 - title (Optional[str]): The title of the post, if available.
 - description (Optional[str]): The description of the post, if available.
 - text (Optional[str]): The text content of the post, if available.
