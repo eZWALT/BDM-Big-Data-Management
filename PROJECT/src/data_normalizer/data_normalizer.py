@@ -21,7 +21,7 @@ process all the tables inside a topic, knowing that they all have the correct
 schema, defined in the data_cleaners module.
 
 The schema of the output table has the following columns:
-- extraction_id (int): The date and time when the data was extracted.
+- extraction_id (datetime): The date and time when the data was extracted.
 - source (str): The name of the social network it came from (e.g., "bluesky").
 - uri (str): The URI of the post within the same social network. (Note: to get
     an absolute URI, we need to join it with the social network domain).
