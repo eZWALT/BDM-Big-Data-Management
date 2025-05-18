@@ -49,10 +49,12 @@ The schema of the output table has the following columns:
 - quotes (Optional[int]): The number of quotes of the post, if available.
 """
 
+import os
 from functools import reduce
 from typing import List, Literal, Tuple
 
-# from minio import Minio
+from minio import Minio
+from minio.commonconfig import CopySource
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, current_timestamp, lit
 
@@ -157,7 +159,15 @@ def process_twitter(spark: SparkSession, input_topic_path: str) -> DataFrame:
     return df
 
 
-def process_youtube(spark: SparkSession, input_topic_path: str) -> DataFrame:
+def process_youtube(
+    spark: SparkSession,
+    input_topic_path: str,
+    output_path: str,
+    minio_host: str,
+    minio_port: str,
+    minio_access_key: str,
+    minio_secret_key: str,
+) -> DataFrame:
     """
     Youtube topic contains two tables: Video Metadata, and Comments.
     And three BLOB stores: Videos, Thumbnails, and Audios.
@@ -190,9 +200,9 @@ def process_youtube(spark: SparkSession, input_topic_path: str) -> DataFrame:
         videoId: str
         threadId: str
     """
-    video_metadata_df = spark.read.format("delta").load(f"s3a://{input_topic_path}/video_metadata")
+    df = spark.read.format("delta").load(f"s3a://{input_topic_path}/video_metadata")
     # Select only the columns we need from the video metadata table
-    video_metadata_df = video_metadata_df.select(
+    df = df.select(
         col("videoId").alias("uri"),
         col("title"),
         col("description"),
@@ -204,59 +214,38 @@ def process_youtube(spark: SparkSession, input_topic_path: str) -> DataFrame:
         col("captions").alias("text"),
     )
 
-    # For each video, we will do the following:
-    # 1. Look in the input_path/videos folder for a file with the same name as the videoId
-    #    If one is found, copy it to the output_path/videos/youtube folder and add the path to the video_attachments column
-    # 2. Look in the input_path/thumbnails folder for a file with the same name as the videoId
-    #    If one is found, copy it to the output_path/images/youtube folder and add the path to the image_attachments column
-    # 3. Look in the input_path/audios folder for a file with the same name as the videoId
-    #    If one is found, copy it to the output_path/audios/youtube folder and add the path to the audio_attachments column
+    minio = Minio(
+        f"{minio_host}:{minio_port}",
+        access_key=minio_access_key,
+        secret_key=minio_secret_key,
+        secure=False,
+    )
+    src_bucket, src_folder = input_topic_path.split("/", 1)
+    dst_bucket, dst_folder = output_path.split("/", 1)
 
-    def handle_attachments(row):
-        video_id = row["uri"]
-        video_path = f"s3a://{input_topic_path}/videos/{video_id}.mp4"
-        thumbnail_path = f"s3a://{input_topic_path}/thumbnails/{video_id}.jpg"
-        audio_path = f"s3a://{input_topic_path}/audios/{video_id}.mp3"
+    for dst_subfolder, src_subfolder in [("videos", "videos"), ("thumbnails", "images"), ("audios", "audios")]:
+        # Check if the folder exists in the input path
+        src_subfolder = f"{src_folder}/{src_subfolder}"
+        dst_subfolder = f"{dst_folder}/{dst_subfolder}/youtube"
 
-        video_attachments = (
-            [video_path]
-            if spark._jvm.org.apache.hadoop.fs.FileSystem.get(spark._jsc.hadoopConfiguration()).exists(
-                spark._jvm.org.apache.hadoop.fs.Path(video_path)
-            )
-            else []
+        print(
+            f"Copying data from bucket={src_bucket},folder={src_subfolder} to bucket={dst_bucket},folder={dst_subfolder}"
         )
-        image_attachments = (
-            [thumbnail_path]
-            if spark._jvm.org.apache.hadoop.fs.FileSystem.get(spark._jsc.hadoopConfiguration()).exists(
-                spark._jvm.org.apache.hadoop.fs.Path(thumbnail_path)
-            )
-            else []
-        )
-        audio_attachments = (
-            [audio_path]
-            if spark._jvm.org.apache.hadoop.fs.FileSystem.get(spark._jsc.hadoopConfiguration()).exists(
-                spark._jvm.org.apache.hadoop.fs.Path(audio_path)
-            )
-            else []
-        )
+        src_files = minio.list_objects(src_bucket, recursive=True, prefix=src_subfolder)
+        for file in src_files:
+            src_basename = os.path.basename(file.object_name)
+            dst_file = os.path.join(dst_subfolder, src_basename)
+            print(f"Server-copying file {src_bucket}/{file.object_name} to {dst_bucket}/{dst_file}")
+            minio.copy_object(dst_bucket, dst_file, CopySource(src_bucket, file.object_name))
 
-        return row + (video_attachments, image_attachments, audio_attachments)
-
-    df = video_metadata_df.rdd.map(handle_attachments).toDF(
-        [
-            "uri",
-            "title",
-            "description",
-            "author_uri",
-            "created_at",
-            "views",
-            "likes",
-            "replies",
-            "text",
-            "video_attachments",
-            "image_attachments",
-            "audio_attachments",
-        ]
+    df = df.withColumn(
+        "video_attachments", lit([f"{output_path}/videos/youtube/{col('uri')}.mp4"]).cast("array<string>")
+    )
+    df = df.withColumn(
+        "image_attachments", lit([f"{output_path}/images/youtube/{col('uri')}.jpg"]).cast("array<string>")
+    )
+    df = df.withColumn(
+        "audio_attachments", lit([f"{output_path}/audios/youtube/{col('uri')}.mp3"]).cast("array<string>")
     )
 
     # Add the null columns that we don't have in the youtube data
@@ -270,7 +259,17 @@ def process_youtube(spark: SparkSession, input_topic_path: str) -> DataFrame:
     return df
 
 
-def main(input_sources: List[Tuple[Literal["bluesky", "youtube", "twitter"], str]], output_path: str):
+def main(
+    input_sources: List[Tuple[Literal["bluesky", "youtube", "twitter"], str]],
+    output_path: str,
+    minio_host: str,
+    minio_port: str,
+    minio_access_key: str,
+    minio_secret_key: str,
+):
+    """
+    Main processing function for the data normalizer.
+    """
     spark = SparkSession.builder.appName("DataNormalizer").getOrCreate()
 
     source_dataframes: List[DataFrame] = []
@@ -278,7 +277,9 @@ def main(input_sources: List[Tuple[Literal["bluesky", "youtube", "twitter"], str
         if source == "bluesky":
             res = process_bluesky(spark, input_topic_path)
         elif source == "youtube":
-            res = process_youtube(spark, input_topic_path)
+            res = process_youtube(
+                spark, input_topic_path, output_path, minio_host, minio_port, minio_access_key, minio_secret_key
+            )
         elif source == "twitter":
             res = process_twitter(spark, input_topic_path)
         else:
@@ -311,6 +312,10 @@ if __name__ == "__main__":
         type=str,
         help="Input topic path, with the format <source>:<path>. Example: bluesky:/path/to/bluesky",
     )
+    parser.add_argument("--minio_host", required=True, help="MinIO host")
+    parser.add_argument("--minio_port", required=True, help="MinIO port")
+    parser.add_argument("--minio_access_key", required=True, help="MinIO access key")
+    parser.add_argument("--minio_secret_key", required=True, help="MinIO secret key")
 
     args = parser.parse_args()
     inputs = []
@@ -318,4 +323,11 @@ if __name__ == "__main__":
         source, path = input_source.split(":", 1)
         inputs.append((source, path))
 
-    main(inputs, args.output)
+    main(
+        inputs,
+        args.output,
+        args.minio_host,
+        args.minio_port,
+        args.minio_access_key,
+        args.minio_secret_key,
+    )

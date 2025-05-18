@@ -1,6 +1,6 @@
 import os
 import re
-from typing import Any
+from typing import Any, TypeVar
 
 # Patterns with the format ${ENV_VAR|DEFAULT} are considered environment variables
 environ_regex = re.compile(r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?:\|([^}]+))?\}")
@@ -8,8 +8,10 @@ environ_regex = re.compile(r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?:\|([^}]+))?\}")
 # Patterns with the format {PLACEHOLDER|DEFAULT} are considered placeholders
 placeholder_regex = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)(?:\|([^}]+))?\}")
 
+T = TypeVar("T")
 
-def replace_placeholders(object: Any, **placeholder_values: Any) -> Any:
+
+def replace_placeholders(object: T, **placeholder_values: Any) -> T:
     """
     Replace placeholders recursively in the given object with values from placeholder_values.
     The placeholders are in the format {key} and are replaced with the corresponding

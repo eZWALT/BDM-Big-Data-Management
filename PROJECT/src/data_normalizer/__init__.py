@@ -9,6 +9,7 @@ class NormalizerConfig(TypedDict):
     conf: Optional[Dict[str, str]]  # Optional configuration for the normalizer
     env_vars: Optional[Dict[str, str]]  # Optional environment variables for the normalizer
     py_files: Optional[str]  # Optional Python files for the normalizer
+    application_args: Optional[Dict[str, str]]  # Optional application arguments for the normalizer
     output_dir: str  # Output directory for the normalizer
 
 

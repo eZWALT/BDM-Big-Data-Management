@@ -189,6 +189,18 @@ def create_batch_product_tracking_dag(dag_id: str, company: Company, product: Pr
                     )
                 )
 
+        app_args = [
+            "--output",
+            replace_placeholders(normalizer_config["output_dir"], **global_context),
+            "--input",
+            *(f"{social_network}:{source_topic}" for social_network, source_topic, _ in normalizer_sources),
+        ]
+
+        for arg_key, arg_value in normalizer_config.get("application_args", {}).items():
+            # Replace placeholders in the argument value
+            app_args.append(f"--{arg_key}")
+            app_args.append(replace_placeholders(arg_value, **global_context))
+
         # Create the normalizer task
         normalizer_task = SparkSubmitOperator(
             task_id=f"normalize-{product.name}",
@@ -196,10 +208,7 @@ def create_batch_product_tracking_dag(dag_id: str, company: Company, product: Pr
             conn_id="spark_default",  # Define this connection in Airflow UI
             name=f"normalize-{product.name}",
             verbose=True,
-            application_args=[
-                f"--output {replace_placeholders(normalizer_config['output_dir'], **global_context)}",
-                f"--input {' '.join([f'{social_network}:{source_topic}' for social_network, source_topic, _ in normalizer_sources])}",
-            ],
+            application_args=app_args,
             conf=replace_placeholders(normalizer_config.get("conf", {}), **global_context),
             py_files=replace_placeholders(normalizer_config.get("py_files", []), **global_context),
             env_vars=replace_placeholders(normalizer_config.get("env_vars", {}), **global_context),
