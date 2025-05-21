@@ -6,60 +6,23 @@ import altair as alt
 import os
 import random
 from datetime import datetime, timedelta
+import duckdb
 
 # ----------------------------
-# Synthetic Data Generator
-# ----------------------------
-
-def generate_synthetic_data(n=200) -> pd.DataFrame:
-    companies = {
-        "OpenAI": ["ChatGPT", "DALL·E"],
-        "Google": ["Gemini", "Bard"],
-        "Meta": ["Threads", "Llama"]
-    }
-    platforms = ["YouTube", "Twitter", "Bluesky"]
-
-    data = []
-
-    for _ in range(n):
-        company = random.choice(list(companies.keys()))
-        product = random.choice(companies[company])
-        platform = random.choice(platforms)
-        timestamp = datetime.today() - timedelta(days=random.randint(0, 30))
-        text = f"Random comment about {product} on {platform}."
-        num_likes = random.randint(0, 500)
-        num_comments = random.randint(0, 50)
-
-        data.append({
-            "timestamp": timestamp,
-            "company": company,
-            "product": product,
-            "platform": platform,
-            "text": text,
-            "num_likes": num_likes,
-            "num_comments": num_comments,
-        })
-
-    df = pd.DataFrame(data)
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
-    return df
-
-# ----------------------------
-# Data Loader (DuckDB or Synthetic)
+# Data Loader (DuckDB)
 # ----------------------------
 
 def load_data() -> pd.DataFrame:
     environment = os.getenv("ENVIRONMENT_TYPE", "development")
     if environment == "production":
         # Example placeholder, replace with your real DB loading code
-        import duckdb
         con = duckdb.connect("data/sentiment.duckdb")
         df = con.execute("SELECT timestamp, company, product, platform, text, num_likes, num_comments FROM sentiment").df()
         con.close()
         df["timestamp"] = pd.to_datetime(df["timestamp"])
         return df
     else:
-        return generate_synthetic_data()
+        raise ValueError("development environment has been removed")
 
 # ----------------------------
 # KPI Cards
