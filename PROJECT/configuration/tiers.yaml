@@ -1,21 +1,21 @@
 basic:
   airflow_dag_args:
-    schedule: "@daily"
+    schedule: "@monthly"
     catchup: False
-  batch_producers:
+  social_networks:
     - bluesky
 standard:
   airflow_dag_args:
     schedule: "@daily"
     catchup: False
-  batch_producers:
+  social_networks:
     - bluesky
-    # - twitter
+    - youtube
 premium:
   airflow_dag_args:
     schedule: "@daily"
     catchup: False
-  batch_producers:
+  social_networks:
     - bluesky
-    # - twitter
-    # - youtube
+    - youtube
+    - twitter

@@ -171,7 +171,7 @@ class YoutubeAPIClient:
     ) -> Tuple[List[VideoComment], Optional[str]]:
         """Fetches top-level comments for a video."""
         api_params = {
-            "part": "snippet",
+            "part": "id,snippet",
             "videoId": video_id,
             "key": self.api_key,
             "order": order,
@@ -203,6 +203,7 @@ class YoutubeAPIClient:
                 "replies": item["snippet"].get("totalReplyCount", 0),
                 "publishedAt": item["snippet"]["topLevelComment"]["snippet"].get("publishedAt", "Unknown"),
                 "videoId": video_id,
+                "threadId": item["id"],
             }
             for item in items
         ), response.get("nextPageToken", None)

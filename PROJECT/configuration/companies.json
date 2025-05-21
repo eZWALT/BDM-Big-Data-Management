@@ -4,8 +4,8 @@
         "products": [
             {
                 "product_name": "Water Jordans",
-                "product_keywords": ["water jordans", "nike jordans"],
-                "tracking_tier": "premium"
+                "product_keywords": ["water jordans", "jordans"],
+                "tracking_tier": "standard"
             },
             {
                 "product_name": "Fake Ass Jordans",
@@ -20,7 +20,7 @@
             {
                 "product_name": "Edge Browser",
                 "product_keywords": ["edge", "bing"],
-                "tracking_tier": "standard"
+                "tracking_tier": "basic"
             }
         ]
     }
