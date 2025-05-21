@@ -10,6 +10,7 @@
 # Airflow related 
 airflow/logs/
 airflow/postgres/
+data_lake/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

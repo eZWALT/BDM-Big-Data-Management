@@ -39,3 +39,5 @@ ENV SPARK_HOME=/opt/spark \
 # Install the required Python packages
 RUN pip install --no-cache-dir apache-airflow-providers-apache-spark==5.2.1 --break-system-packages
 RUN pip install --no-cache-dir pyspark==3.5.0 --break-system-packages
+RUN pip install --no-cache-dir vadersentiment==3.3.2 --break-system-packages
+
