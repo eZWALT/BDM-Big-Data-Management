@@ -2,13 +2,14 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Type
+from typing import Any, Dict, List, Tuple, Type
 
 from airflow.models import BaseOperator
 from airflow.operators.python import PythonOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
 from airflow import DAG
+from src.data_normalizer import NormalizerConfig, get_normalizer_config, normalizer_script
 
 if __name__ == "__main__":
     import os
@@ -71,7 +72,7 @@ def batch_produce_task(query: List[str], social_network: str, hours_since_last_e
         pass
 
 
-def create_batch_product_tracking_dag(dag_id: str, product: Product):
+def create_batch_product_tracking_dag(dag_id: str, company: Company, product: Product):
     """Creates a batch tracking DAG dynamically."""
     tier_config = get_tier_definition(product.tracking_tier)
 
@@ -89,10 +90,26 @@ def create_batch_product_tracking_dag(dag_id: str, product: Product):
     else:
         raise ValueError(f"Unsupported schedule interval: {schedule_interval}")
 
+    normalizer_config = get_normalizer_config()
+
+    global_context = {
+        "product_id": product.name,
+        "company_id": company.company_id,
+    }
+
     with dag:
+        normalizer_sources: List[Tuple[str, str, List[BaseOperator]]] = []
+        # (social_network, source_topic, tasks)
         for query in product.keywords:
             hashed_query = hash_query(query)
+            query_context = global_context.copy()
+            query_context["query"] = query
+            query_context["query_hash"] = hashed_query
+
             for social_network in tier_config.social_networks:
+                social_network_context = query_context.copy()
+                social_network_context["social_network"] = social_network
+
                 ingestion_task = PythonOperator(
                     task_id=f"ingest-{social_network}-{hashed_query}",
                     python_callable=batch_produce_task,
@@ -111,7 +128,12 @@ def create_batch_product_tracking_dag(dag_id: str, product: Product):
                         f"Data loaders: {data_loaders.keys()}, Data cleaners: {data_cleaners.keys()}"
                     )
 
+                cleaner_tasks = []  # To later set the dependencies with the normalizer
                 for loader_cleaner_id in data_loaders.keys():
+                    # Create a context for the data loader and cleaner
+                    loader_cleaner_context = social_network_context.copy()
+                    loader_cleaner_context["loader_cleaner_id"] = loader_cleaner_id
+
                     data_loader_config = data_loaders[loader_cleaner_id]
                     data_cleaner_config = data_cleaners[loader_cleaner_id]
 
@@ -119,7 +141,7 @@ def create_batch_product_tracking_dag(dag_id: str, product: Product):
                     for arg_key, arg_value in data_loader_config["application_args"].items():
                         # Replace placeholders in the argument value
                         app_args.append(f"--{arg_key}")
-                        app_args.append(replace_placeholders(arg_value, query_hash=hashed_query))
+                        app_args.append(replace_placeholders(arg_value, **loader_cleaner_context))
                     loader_task = SparkSubmitOperator(
                         task_id=f"load-{social_network}-{hashed_query}-{loader_cleaner_id}",
                         application=get_data_loader_script(data_loader_config["loader_type"]),
@@ -127,9 +149,9 @@ def create_batch_product_tracking_dag(dag_id: str, product: Product):
                         name=f"load-{social_network}-{hashed_query}-{loader_cleaner_id}",
                         verbose=True,
                         application_args=app_args,
-                        conf=replace_placeholders(data_loader_config.get("conf", {}), query_hash=hashed_query),
-                        py_files=replace_placeholders(data_loader_config.get("py_files", []), query_hash=hashed_query),
-                        env_vars=replace_placeholders(data_loader_config.get("env_vars", {}), query_hash=hashed_query),
+                        conf=replace_placeholders(data_loader_config.get("conf", {}), **loader_cleaner_context),
+                        py_files=replace_placeholders(data_loader_config.get("py_files", []), **loader_cleaner_context),
+                        env_vars=replace_placeholders(data_loader_config.get("env_vars", {}), **loader_cleaner_context),
                     )
                     ingestion_task >> loader_task
 
@@ -138,7 +160,7 @@ def create_batch_product_tracking_dag(dag_id: str, product: Product):
                     for arg_key, arg_value in data_cleaner_config["application_args"].items():
                         # Replace placeholders in the argument value
                         app_args.append(f"--{arg_key}")
-                        app_args.append(replace_placeholders(arg_value, query_hash=hashed_query))
+                        app_args.append(replace_placeholders(arg_value, **loader_cleaner_context))
                     cleaner_task = SparkSubmitOperator(
                         task_id=f"clean-{social_network}-{hashed_query}-{loader_cleaner_id}",
                         application=get_data_cleaner_script(data_cleaner_config["cleaner_type"]),
@@ -146,11 +168,55 @@ def create_batch_product_tracking_dag(dag_id: str, product: Product):
                         name=f"clean-{social_network}-{hashed_query}-{loader_cleaner_id}",
                         verbose=True,
                         application_args=app_args,
-                        conf=replace_placeholders(data_cleaner_config.get("conf", {}), query_hash=hashed_query),
-                        py_files=replace_placeholders(data_cleaner_config.get("py_files", []), query_hash=hashed_query),
-                        env_vars=replace_placeholders(data_cleaner_config.get("env_vars", {}), query_hash=hashed_query),
+                        conf=replace_placeholders(data_cleaner_config.get("conf", {}), **loader_cleaner_context),
+                        py_files=replace_placeholders(
+                            data_cleaner_config.get("py_files", []), **loader_cleaner_context
+                        ),
+                        env_vars=replace_placeholders(
+                            data_cleaner_config.get("env_vars", {}), **loader_cleaner_context
+                        ),
                     )
                     loader_task >> cleaner_task
+
+                    cleaner_tasks.append(cleaner_task)
+
+                # Add the normalizer source to the list
+                normalizer_sources.append(
+                    (
+                        social_network,
+                        replace_placeholders(normalizer_config["topics"][social_network], **social_network_context),
+                        cleaner_tasks,
+                    )
+                )
+
+        app_args = [
+            "--output",
+            replace_placeholders(normalizer_config["output_dir"], **global_context),
+            "--input",
+            *(f"{social_network}:{source_topic}" for social_network, source_topic, _ in normalizer_sources),
+        ]
+
+        for arg_key, arg_value in normalizer_config.get("application_args", {}).items():
+            # Replace placeholders in the argument value
+            app_args.append(f"--{arg_key}")
+            app_args.append(replace_placeholders(arg_value, **global_context))
+
+        # Create the normalizer task
+        normalizer_task = SparkSubmitOperator(
+            task_id=f"normalize-{product.name}",
+            application=normalizer_script,
+            conn_id="spark_default",  # Define this connection in Airflow UI
+            name=f"normalize-{product.name}",
+            verbose=True,
+            application_args=app_args,
+            conf=replace_placeholders(normalizer_config.get("conf", {}), **global_context),
+            py_files=replace_placeholders(normalizer_config.get("py_files", []), **global_context),
+            env_vars=replace_placeholders(normalizer_config.get("env_vars", {}), **global_context),
+        )
+        # Set dependencies for normalizer task
+        for _, _, tasks in normalizer_sources:
+            for task in tasks:
+                task >> normalizer_task
 
     return dag
 
@@ -166,7 +232,7 @@ def generate_dynamic_dags_from_serialized_companies(data_path: str):
         for i, product in enumerate(company.products):
             dag_id = f"dag_{company.generate_usecase_dag_id(i)}"
             # Create dag and store it in global symbol table
-            dag = create_batch_product_tracking_dag(dag_id, product)
+            dag = create_batch_product_tracking_dag(dag_id, company, product)
             # Enable the dag
             globals()[dag_id] = dag
             logging.info(f"DAG created for {company.company_id} - {product.name} with dag_id: {dag_id}")

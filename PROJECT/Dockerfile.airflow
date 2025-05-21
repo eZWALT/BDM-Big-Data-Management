@@ -1,5 +1,5 @@
 # Start with the official Apache Airflow image
-FROM apache/airflow:2.10.5
+FROM apache/airflow:2.11.0rc1-python3.11
 
 # Install OpenJDK (Java 17) needed for spark!!!
 USER root 
@@ -21,25 +21,21 @@ RUN wget -q https://archive.apache.org/dist/spark/spark-3.5.0/spark-3.5.0-bin-ha
     && rm spark-3.5.0-bin-hadoop3.tgz \
     && ln -s /opt/spark-3.5.0-bin-hadoop3 /opt/spark
 
-
 RUN apt-get update \
     && apt-get install -y --no-install-recommends procps \
     && apt-get autoremove -yqq --purge \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Set JAVA_HOME environment variable
 USER airflow
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
 # Set environment variables for Spark
 ENV SPARK_HOME=/opt/spark \
     PATH=$PATH:/opt/spark/bin \
-    PYSPARK_PYTHON=python3 \
-    PYSPARK_DRIVER_PYTHON=python3
+    PYSPARK_PYTHON=python3.11 \
+    PYSPARK_DRIVER_PYTHON=python3.11 \
+    JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
     
-RUN pip install --no-cache-dir apache-airflow-providers-apache-spark==5.2.1
-
-
-# Install PySpark
-RUN pip install --no-cache-dir pyspark==3.5.0
+# Install the required Python packages
+RUN pip install --no-cache-dir apache-airflow-providers-apache-spark==5.2.1 --break-system-packages
+RUN pip install --no-cache-dir pyspark==3.5.0 --break-system-packages

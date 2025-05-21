@@ -1,9 +1,10 @@
 basic:
   airflow_dag_args:
-    schedule: "@monthly"
+    schedule: "@daily"
     catchup: False
   social_networks:
     - bluesky
+    - youtube
 standard:
   airflow_dag_args:
     schedule: "@daily"
