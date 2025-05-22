@@ -24,10 +24,10 @@ cleaners = {
     },
 }
 
-class LandingConsumer(StreamConsumer):
+class TrustedConsumer(StreamConsumer):
     def __init__(self):
         super().__init__(id)
-        # prepare a producer to landing-* topics
+        # prepare a producer to trusted-* topics
         self.producer = KafkaProducer(
             bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
             value_serializer=lambda v: json.dumps(v).encode(""),
@@ -67,7 +67,7 @@ class LandingConsumer(StreamConsumer):
             "type":       data_type,
         }
 
-        out_topic = f"landing-{source}-{query_hash}-{data_type}"
+        out_topic = f"trusted-{source}-{query_hash}-{data_type}"
         self.producer.send(out_topic, cleaned)
         logger.debug(f"[{self.id}] → {out_topic}: {cleaned.get('uri', cleaned)}")
 
