@@ -5,7 +5,7 @@ import os
 from streamlit_file_browser import st_file_browser
 
 # Airflow API Configuration (Extracted from Docker Compose) to get URL
-LOCAL_TEST = True
+LOCAL_TEST = False
 AIRFLOW_URL = "http://localhost:8080/api/v1" if LOCAL_TEST else "http://airflow-webserver:8080/api/v1"
 AIRFLOW_AUTH = (
     os.getenv("AIRFLOW_USERNAME", "airflow"),  

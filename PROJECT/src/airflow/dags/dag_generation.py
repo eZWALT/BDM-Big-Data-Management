@@ -23,6 +23,7 @@ if __name__ == "__main__":
 from src.data_cleaners import get_data_cleaner_configs, get_data_cleaner_script
 from src.data_loaders import LoaderConfig, get_data_loader_configs, get_data_loader_script
 from src.ingestion.batch import BatchProduceTask, hash_query, load_producer_config
+from src.consumers.sentiment import *
 from src.utils.company import Company, Product, deserialize_companies_from_json
 from src.utils.placeholders import replace_placeholders
 from src.utils.tiers import get_tier_definition
@@ -54,6 +55,8 @@ class DAGConfig:
 # DAG Factory Methods                                                          #
 # ===-----------------------------------------------------------------------===#
 
+def consumer_sentiment_task():
+    pass
 
 def batch_produce_task(query: List[str], social_network: str, hours_since_last_execution: int) -> None:
     producer_config = load_producer_config(social_network)
@@ -217,6 +220,18 @@ def create_batch_product_tracking_dag(dag_id: str, company: Company, product: Pr
         for _, _, tasks in normalizer_sources:
             for task in tasks:
                 task >> normalizer_task
+                
+        # sentiment_task = PythonOperator(
+        #     task_id=f"consumption-sentiment-{hashed_query}",
+        #     python_callable=batch_produce_task,
+        #     op_kwargs={
+        #         "query": query,
+        #         "social_network": social_network,
+        #         "hours_since_last_execution": hours_since_last_execution,
+        #     },
+        # )
+        # normalizer_task >> sentiment_task
+
 
     return dag
 
@@ -240,3 +255,11 @@ def generate_dynamic_dags_from_serialized_companies(data_path: str):
 
 # Trigger the DAG generation (Relative path inside the docker container)
 generate_dynamic_dags_from_serialized_companies("configuration/companies.json")
+
+
+
+
+##### REVISE THIS LIL MF 
+
+
+

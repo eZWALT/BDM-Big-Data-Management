@@ -1,0 +1,13 @@
+# TODO: Revise this, needs to be checked
+sentiment:
+  env_vars:
+    AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+    AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+  output_dir: consumers/{company_id}/{product_id}
+  py_files: dags/libs/minio_libs.zip
+  application_args:
+    minio_access_key: ${MINIO_ACCESS_KEY}
+    minio_secret_key: ${MINIO_SECRET_KEY}
+    minio_host: ${MINIO_HOST}
+    minio_port: ${MINIO_PORT}
+    
