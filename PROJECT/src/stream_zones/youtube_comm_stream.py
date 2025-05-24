@@ -22,13 +22,20 @@ def clean_youtube_comment(raw: dict) -> dict:
        or not raw.get("comment") or not raw.get("publishedAt"):
         return None
     
-    # ADD : Convert the "Unknown" values to None in the columns channelId and publishedAt
+    # clean up channelId
+    ch = raw.get("channelId")
+    channel_id = None if ch == "Unknown" else ch
 
-    # parse publishedAt from ISO to unix epoch
-    #   YouTube gives e.g. "2025-03-28T03:36:22Z"
-    # .replace("Z","+00:00") makes it iso-8601 parseable
-    ts = datetime.fromisoformat(raw["publishedAt"].replace("Z", "+00:00")) \
-                .timestamp()
+    # clean up publishedAt
+    pub_raw = raw.get("publishedAt")
+    if pub_raw == "Unknown":
+        # drop the record
+        return None
+    else:
+        ts = (
+            datetime.fromisoformat(pub_raw.replace("Z", "+00:00"))
+            .timestamp()
+        )
 
     return {
         "threadId":    raw["threadId"],
@@ -37,7 +44,7 @@ def clean_youtube_comment(raw: dict) -> dict:
         "publishedAt": ts,
         "likes":       int(raw.get("likes", 0)),
         "replies":     int(raw.get("replies", 0)),
-        "channelId":   raw.get("channelId"),
+        "channelId":   channel_id,
         "channelName": raw.get("channelName"),
         "source":      "youtube",
         **raw.get("_meta", {}),
