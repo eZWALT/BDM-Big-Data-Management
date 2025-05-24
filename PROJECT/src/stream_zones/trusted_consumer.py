@@ -6,7 +6,7 @@ from typing import Dict, Callable
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 
 from src.analysis.streaming import StreamConsumer
-from src.stream_cleaners import (
+from src.stream_zones import (
     bluesky_post_stream,
     bluesky_like_stream,
     youtube_comm_stream,
