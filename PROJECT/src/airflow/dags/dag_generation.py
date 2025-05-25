@@ -10,6 +10,7 @@ from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOpe
 
 from airflow import DAG
 from src.data_normalizer import NormalizerConfig, get_normalizer_config, normalizer_script
+from src.consumers import ConsumerConfig, get_consumer_configs, get_consumer_script
 
 if __name__ == "__main__":
     import os
@@ -23,7 +24,6 @@ if __name__ == "__main__":
 from src.data_cleaners import get_data_cleaner_configs, get_data_cleaner_script
 from src.data_loaders import LoaderConfig, get_data_loader_configs, get_data_loader_script
 from src.ingestion.batch import BatchProduceTask, hash_query, load_producer_config
-from src.consumers.sentiment import *
 from src.utils.company import Company, Product, deserialize_companies_from_json
 from src.utils.placeholders import replace_placeholders
 from src.utils.tiers import get_tier_definition
@@ -94,6 +94,7 @@ def create_batch_product_tracking_dag(dag_id: str, company: Company, product: Pr
         raise ValueError(f"Unsupported schedule interval: {schedule_interval}")
 
     normalizer_config = get_normalizer_config()
+    sentiment_config = get_consumer_configs(task_name="sentiment")
 
     global_context = {
         "product_id": product.name,
@@ -148,7 +149,7 @@ def create_batch_product_tracking_dag(dag_id: str, company: Company, product: Pr
                     loader_task = SparkSubmitOperator(
                         task_id=f"load-{social_network}-{hashed_query}-{loader_cleaner_id}",
                         application=get_data_loader_script(data_loader_config["loader_type"]),
-                        conn_id="spark_default",  # Define this connection in Airflow UI
+                        conn_id="spark_default",  
                         name=f"load-{social_network}-{hashed_query}-{loader_cleaner_id}",
                         verbose=True,
                         application_args=app_args,
@@ -167,7 +168,7 @@ def create_batch_product_tracking_dag(dag_id: str, company: Company, product: Pr
                     cleaner_task = SparkSubmitOperator(
                         task_id=f"clean-{social_network}-{hashed_query}-{loader_cleaner_id}",
                         application=get_data_cleaner_script(data_cleaner_config["cleaner_type"]),
-                        conn_id="spark_default",  # Define this connection in Airflow UI
+                        conn_id="spark_default",  
                         name=f"clean-{social_network}-{hashed_query}-{loader_cleaner_id}",
                         verbose=True,
                         application_args=app_args,
@@ -208,7 +209,7 @@ def create_batch_product_tracking_dag(dag_id: str, company: Company, product: Pr
         normalizer_task = SparkSubmitOperator(
             task_id=f"normalize-{product.name}",
             application=normalizer_script,
-            conn_id="spark_default",  # Define this connection in Airflow UI
+            conn_id="spark_default",  
             name=f"normalize-{product.name}",
             verbose=True,
             application_args=app_args,
@@ -221,16 +222,29 @@ def create_batch_product_tracking_dag(dag_id: str, company: Company, product: Pr
             for task in tasks:
                 task >> normalizer_task
                 
-        # sentiment_task = PythonOperator(
-        #     task_id=f"consumption-sentiment-{hashed_query}",
-        #     python_callable=batch_produce_task,
-        #     op_kwargs={
-        #         "query": query,
-        #         "social_network": social_network,
-        #         "hours_since_last_execution": hours_since_last_execution,
-        #     },
-        # )
-        # normalizer_task >> sentiment_task
+        
+        # TODO: Update this fixed rigid logic for various consumption tasks 
+        # rather than only sentiment analysis as it is right now
+        
+        for arg_key, arg_value in normalizer_config.get("application_args", {}).items():
+            # Replace placeholders in the argument value
+            app_args.append(f"--{arg_key}")
+            app_args.append(replace_placeholders(arg_value, **global_context))
+            
+        # Create the sentiment consumer task
+        sentiment_task = SparkSubmitOperator(
+            task_id=f"consumer-sentiment-{product.name}",
+            application=get_consumer_script(consumer_type="sentiment"),
+            conn_id="spark_default",  
+            name=f"consumer-sentiment-{product.name}",
+            verbose=True,
+            application_args=app_args,
+            conf=replace_placeholders(normalizer_config.get("conf", {}), **global_context),
+            py_files=replace_placeholders(normalizer_config.get("py_files", []), **global_context),
+            env_vars=replace_placeholders(normalizer_config.get("env_vars", {}), **global_context),
+        )
+        normalizer_task >> sentiment_task
+
 
 
     return dag
@@ -255,11 +269,5 @@ def generate_dynamic_dags_from_serialized_companies(data_path: str):
 
 # Trigger the DAG generation (Relative path inside the docker container)
 generate_dynamic_dags_from_serialized_companies("configuration/companies.json")
-
-
-
-
-##### REVISE THIS LIL MF 
-
 
 
