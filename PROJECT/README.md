@@ -126,7 +126,7 @@ buckets:
 Then, and only once you have done all the previous steps, you can start the rest
 of the containers. To do so, be sure to first export all the environment variables
 from the `.env` file to your shell. You can do this by running the following
-command in the root of the project:
+command in the root of the project (NOTE: This is not persistent!):
 
 ```sh
 export $(cat .env | xargs)
