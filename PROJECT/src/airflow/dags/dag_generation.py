@@ -55,9 +55,6 @@ class DAGConfig:
 # DAG Factory Methods                                                          #
 # ===-----------------------------------------------------------------------===#
 
-def consumer_sentiment_task():
-    pass
-
 def batch_produce_task(query: List[str], social_network: str, hours_since_last_execution: int) -> None:
     producer_config = load_producer_config(social_network)
     task = BatchProduceTask(
@@ -226,8 +223,11 @@ def create_batch_product_tracking_dag(dag_id: str, company: Company, product: Pr
         # TODO: Update this fixed rigid logic for various consumption tasks 
         # rather than only sentiment analysis as it is right now
         
-        for arg_key, arg_value in normalizer_config.get("application_args", {}).items():
+        for arg_key, arg_value in sentiment_config.get("application_args", {}).items():
             # Replace placeholders in the argument value
+            
+            # CHECK THIS ARGUMENTS KEYS AND VALUES! (application_args)
+
             app_args.append(f"--{arg_key}")
             app_args.append(replace_placeholders(arg_value, **global_context))
             

@@ -1,20 +1,20 @@
 basic:
   airflow_dag_args:
-    schedule: "@daily"
+    schedule: "@hourly"
     catchup: False
   social_networks:
     - bluesky
     - youtube
 standard:
   airflow_dag_args:
-    schedule: "@daily"
+    schedule: "@hourly"
     catchup: False
   social_networks:
     - bluesky
     - youtube
 premium:
   airflow_dag_args:
-    schedule: "@daily"
+    schedule: "@hourly"
     catchup: False
   social_networks:
     - bluesky

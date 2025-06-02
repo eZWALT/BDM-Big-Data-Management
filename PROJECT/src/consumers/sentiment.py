@@ -114,17 +114,21 @@ def main(input_path: str, output_path: str, schema_path: str):
 # -------------------------------
 # Entrypoint
 # -------------------------------
+
+# unrecognized arguments: youtube:trusted/youtube-a1cb100f bluesky:trusted/bluesky-3c77f261 youtube:trusted/youtube-3c77f261 --minio_access_key 065Mqflhf5rfx2FIxkWM --minio_secret_key PA6X1yeKUfiR7fNUodiAreJjvjTEmMqSmADqggbP --minio_host minio --minio_port 9000 --minio_access_key 065Mqflhf5rfx2FIxkWM --minio_secret_key PA6X1yeKUfiR7fNUodiAreJjvjTEmMqSmADqggbP --minio_host minio --minio_port 9000
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--input", default="exploitation", help="Delta table input path (MinIO)"
     )
     parser.add_argument(
-        "--output", default="sconsumers/sentiment.duckdb", help="DuckDB output path"
+        "--output", default="consumers/sentiment.duckdb", help="DuckDB output path"
     )
     parser.add_argument(
         "--schema", default="governance/sentiment_warehouse.yaml", help="YAML warehouse schema file path"
     )
+    parser.add_argument()
 
     args = parser.parse_args()
     main(args.input, args.output, args.schema)
