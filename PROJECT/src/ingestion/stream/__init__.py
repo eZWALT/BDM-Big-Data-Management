@@ -13,6 +13,8 @@ from kafka import KafkaProducer
 from kafka.admin import KafkaAdminClient, NewTopic
 from loguru import logger
 
+from src.utils.hash import hash_query
+
 if __name__ == "__main__":
     import os
     import sys
@@ -123,9 +125,7 @@ def _format_topic(producer_name: str, query: str) -> str:
     """
     Format the name of the task based on the producer name, database name, and query.
     """
-    # Use sha256 to hash the query for a consistent length, and take the first 8 characters
-    query_hash = sha256(query.encode("utf-8")).hexdigest()[:8]
-    return f"{producer_name}-{query_hash}"
+    return f"{producer_name}-{hash_query(query)}"
 
 
 class StreamProduceTask(Task):
