@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Literal, Tuple, Type
 from flask import Flask, jsonify, request
 from loguru import logger
 
+from src.utils.company import deserialize_companies_from_json
 from src.utils.config import ConfigManager
 
 from .stream import KafkaAdmin, ProducerConfig, StreamProducer, _format_topic, _load_stream_producer
@@ -41,7 +42,7 @@ class Pod:
         }
 
 
-def _discover_pods() -> List[Pod]:
+def _discover_pods(config_path: str) -> List[Pod]:
     """
     Discover all available pods from the Clients configuration.
     """
@@ -59,20 +60,19 @@ def _discover_pods() -> List[Pod]:
             raise ValueError(f"Duplicate producer name: {name}")
         found_names.add(name)
         stream_producers.append(
-            (
-                name,
-                _load_stream_producer(producer_config["py_object"]),
-                producer_config.get("kwargs", {}),
-            )
+            (name, _load_stream_producer(producer_config["py_object"]), producer_config.get("kwargs", {}))
         )
 
     kafka_admin = KafkaAdmin(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
     kafka_config = config._load_config()["kafka"]
 
     products: List[Tuple[str, str]] = []  # This is what should be discovered from the client configs.
-    products.append(("nike", "water jordan"))
-    products.append(("microsoft", "microsoft excel"))
-    products.append(("microsoft", "microsoft incel"))
+
+    companies = deserialize_companies_from_json(config_path)
+    for company in companies:
+        for i, product in enumerate(company.products):
+            for query in product.keywords:
+                products.append((company.company_id, query))
 
     pods: List[Pod] = []
     for client, query in products:
@@ -188,7 +188,8 @@ class PodManager:
         logger.debug(f"Pod {pod.id} started with process ID {process.pid}")
 
 
-manager = PodManager(_discover_pods())  # In a production environment, we would use a storage to persist the pods.
+manager = PodManager(_discover_pods("configuration/companies.json"))
+# In a production environment, we would use a storage to persist the pods.
 
 
 @app.get("/pods")
