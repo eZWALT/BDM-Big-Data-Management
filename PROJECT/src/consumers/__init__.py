@@ -21,7 +21,7 @@ def get_consumer_configs(task_name: str) -> Dict[str, ConsumerConfig]:
     config = ConfigManager(config_path="configuration/consumers.yaml").config 
     if not task_name in config:
         raise ValueError(f"Consumption task {task_name} not found in configuration.")
-    return config 
+    return config[task_name]
 
 def get_consumer_script(consumer_type: str) -> str:
     """

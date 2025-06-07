@@ -220,14 +220,13 @@ def create_batch_product_tracking_dag(dag_id: str, company: Company, product: Pr
                 task >> normalizer_task
                 
         
+        # Reset the application arguments for this task
+        app_args = []
         # TODO: Update this fixed rigid logic for various consumption tasks 
         # rather than only sentiment analysis as it is right now
         
         for arg_key, arg_value in sentiment_config.get("application_args", {}).items():
-            # Replace placeholders in the argument value
-            
-            # CHECK THIS ARGUMENTS KEYS AND VALUES! (application_args)
-
+            # Replace placeholders in the argument value            
             app_args.append(f"--{arg_key}")
             app_args.append(replace_placeholders(arg_value, **global_context))
             
@@ -239,9 +238,9 @@ def create_batch_product_tracking_dag(dag_id: str, company: Company, product: Pr
             name=f"consumer-sentiment-{product.name}",
             verbose=True,
             application_args=app_args,
-            conf=replace_placeholders(normalizer_config.get("conf", {}), **global_context),
-            py_files=replace_placeholders(normalizer_config.get("py_files", []), **global_context),
-            env_vars=replace_placeholders(normalizer_config.get("env_vars", {}), **global_context),
+            conf=replace_placeholders(sentiment_config.get("conf", {}), **global_context),
+            py_files=replace_placeholders(sentiment_config.get("py_files", []), **global_context),
+            env_vars=replace_placeholders(sentiment_config.get("env_vars", {}), **global_context),
         )
         normalizer_task >> sentiment_task
 
