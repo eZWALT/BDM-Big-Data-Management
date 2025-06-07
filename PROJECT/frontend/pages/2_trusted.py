@@ -25,7 +25,6 @@ def show_layout():
             """
         )
 
-    st.markdown("🔍 **Explore more about our trusted platform and data security features!**")
 
 if __name__ == "__main__":
     show_layout()

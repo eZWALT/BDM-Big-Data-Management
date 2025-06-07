@@ -123,6 +123,8 @@ def cast_df(df: pd.DataFrame, schema_path: str):
 
     return meta["table"], result
 
+def unknown_to_none(sentiment):
+    return None if sentiment == "unknown" else sentiment
 
 # -------------------------------
 # Main Function
@@ -143,14 +145,22 @@ def main(input_path: str,
     df = df.withColumn("title_sentiment", vader_udf(df["title"]))
     df = df.withColumn("description_sentiment", vader_udf(df["description"]))
 
+    unknown_to_none_udf = udf(unknown_to_none, StringType())
+
+    df = df.withColumn("title_sentiment", unknown_to_none_udf(df["title_sentiment"]))
+    df = df.withColumn("text_sentiment", unknown_to_none_udf(df["text_sentiment"]))
+    df = df.withColumn("description_sentiment", unknown_to_none_udf(df["description_sentiment"]))
+
     df = df.withColumn(
         "sentiment",
         coalesce(
-            df["text_sentiment"],
             df["title_sentiment"],
-            df["description_sentiment"]
+            df["text_sentiment"],
+            df["description_sentiment"],
         )
-    )
+    ).fillna("unknown")
+
+
     table_name = "sentiment"
     df = df.toPandas()
     df["transaction_timestamp"] = datetime.utcnow().isoformat()
