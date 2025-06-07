@@ -6,11 +6,24 @@ from typing import Callable, Dict
 
 from kafka import KafkaConsumer, KafkaProducer
 from loguru import logger
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from consumption.sentiment import create_vader_udf
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 INPUT_PATTERN = "^trusted-.*-.*-.*$"  # trusted-<source>-<query_hash>-<data_type>
 OUTPUT_PREFIX = "product"
 
+def analyze_sentiment(analyzer, text):
+    try:
+        score = analyzer.polarity_scores(text)["compound"]
+        if score >= 0.05:
+            return "positive"
+        elif score <= -0.05:
+            return "negative"
+        else:
+            return "neutral"
+    except:
+        return "unknown"
 
 class ProductConsumer:
     def __init__(self):
@@ -46,10 +59,15 @@ class ProductConsumer:
                 logger.warning("Skipping message without product_id/type in _meta")
                 continue
 
+            # Sentiment analysis on message
+            analyzer = SentimentIntensityAnalyzer()
+            sentiment = analyze_sentiment(analyzer, payload)
+
             # route into product-<product_id>-<data_type>
             out_topic = f"{OUTPUT_PREFIX}-{product_id}-{dtype}"
-            self.producer.send(out_topic, payload)
-            logger.debug(f"Routed → {out_topic}")
+            sentiment_topic = f"{sentiment}"
+            self.producer.send(out_topic, payload, sentiment_topic)
+            logger.debug(f"Routed → {out_topic} - {sentiment}")
 
         self._shutdown()
 
