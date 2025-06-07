@@ -15,7 +15,7 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- loguru==0.7.3 pytubefix==8.12.2 PyYAML==6.0.2 atproto==0.0.59 minio==7.2.15}
+    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:- loguru==0.7.3 pytubefix==8.12.2 PyYAML==6.0.2 atproto==0.0.59 minio==7.2.15 vadersentiment==3.3.2}
 
     # These parameters are here only because we are using a small docker deployment, instead of a real cluster
     AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: 1

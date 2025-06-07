@@ -38,7 +38,7 @@ services:
     image: jupyter/pyspark-notebook:spark-3.5.0
     container_name: spark-notebook
     hostname: spark-notebook
-    restart: unless-stopped
+    restart: "no" # If you die, so be it lil fella its a sacrifice I'm willing to make
     ports:
       - "8888:8888"  # Jupyter Notebook
     environment:
