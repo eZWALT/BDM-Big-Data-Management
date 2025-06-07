@@ -58,3 +58,16 @@ services:
       KAFKA_CLUSTERS_0_ZOOKEEPER: "kafka-zookeeper:2181"
     restart: unless-stopped
 
+
+  stream-normalizers:
+    build:
+      context: .
+      dockerfile: Dockerfile.stream_normalizers
+    container_name: stream-normalizers
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    restart: unless-stopped
+    volumes:
+      - ./configuration:/configuration

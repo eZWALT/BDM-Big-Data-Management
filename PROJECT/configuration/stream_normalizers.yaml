@@ -1,0 +1,10 @@
+normalizers:
+  - name: "bluesky-posts"
+    normalizer: "bluesky-posts"
+    input_topic_template: "bluesky-{query_hash}"
+    output_topic_template: "{company_id}-{product_id}-posts"
+
+  - name: "youtube-videos"
+    normalizer: "youtube-videos"
+    input_topic_template: "youtube-{query_hash}"
+    output_topic_template: "{company_id}-{product_id}-posts"

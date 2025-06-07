@@ -11,6 +11,6 @@ def clean_bluesky_post(raw: dict) -> dict:
 
     return {
         "uri": post_did,
-        "text": raw["text"],
+        "text": post_text,
         "created_at": datetime.fromisoformat(created_at.replace("Z", "+00:00")).timestamp(),
     }
