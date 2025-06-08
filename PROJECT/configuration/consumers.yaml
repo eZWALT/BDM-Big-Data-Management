@@ -1,0 +1,23 @@
+# TODO: Revise this, needs to be checked
+sentiment:
+  conf:
+    spark.jars.packages: "org.apache.hadoop:hadoop-aws:3.3.1,io.delta:delta-spark_2.12:3.2.0"
+    spark.sql.extensions: "io.delta.sql.DeltaSparkSessionExtension"
+    spark.sql.catalog.spark_catalog: "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+    spark.executorEnv.AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+    spark.executorEnv.AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+    spark.hadoop.fs.s3a.endpoint: http://${MINIO_HOST}:${MINIO_PORT}
+    spark.hadoop.fs.s3a.path.style.access: "true"
+  env_vars:
+    AWS_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+    AWS_SECRET_KEY: ${MINIO_SECRET_KEY}
+  py_files: dags/libs/minio_libs.zip
+  application_args:
+    # The parquet file is stored in this section
+    input: exploitation/{company_id}/{product_id}/data
+    output: exploitation/{company_id}/{product_id}/sentiment.duckdb
+    minio_access_key: ${MINIO_ACCESS_KEY}
+    minio_secret_key: ${MINIO_SECRET_KEY}
+    minio_host: ${MINIO_HOST}
+    minio_port: ${MINIO_PORT}
+    #schema: src/governance/sentiment_warehouse.yaml    

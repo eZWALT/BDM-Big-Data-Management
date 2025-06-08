@@ -14,8 +14,20 @@ track engagement, and optimize marketing strategies.
 - **configuration/**: Configuration files for all the project 
 - **frontend/**: Streamlit front-end for the project data management and 
   analytics/dashboarding
-- **src/**: Main source code of the project divided into 4 high level zones 
-  (Ingestion, Landing, Trusted, Exploitation)
+- **src/**: Main source code of the project divided into 5 high level zones 
+  (Ingestion, Landing, Trusted, Exploitation, Consumption...)
+  
+  - **airflow/**: DAG definitions and Airflow-related logic
+  - **analysis/**: Streaming-related processing and analytical tools
+  - **consumers/**: Data consumption modules like dashboards and sentiment analysis
+  - **data_cleaners/**: Spark jobs to clean and validate ingested data
+  - **data_loaders/**: Spark jobs to load data into the lake
+  - **data_normalizer/**: Batch jobs to normalize and harmonize cleaned data
+  - **governance/**: Code for data governance, schemas, and validation rules
+  - **ingestion/**: Batch and streaming ingestion logic from various data sources
+  - **landing/**: Batch jobs related to the creation of the landing zone
+  - **utils/**: Utility functions shared across different modules
+
 - **tests/**: Some unit tests for the project, as well as other scripts for
   testing the different components of the project
 
@@ -114,7 +126,7 @@ buckets:
 Then, and only once you have done all the previous steps, you can start the rest
 of the containers. To do so, be sure to first export all the environment variables
 from the `.env` file to your shell. You can do this by running the following
-command in the root of the project:
+command in the root of the project (NOTE: This is not persistent!):
 
 ```sh
 export $(cat .env | xargs)

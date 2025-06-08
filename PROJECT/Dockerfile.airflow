@@ -37,7 +37,8 @@ ENV SPARK_HOME=/opt/spark \
     JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
     
 # Install the required Python packages
+# We need airflow, spark and vadersentiment+duckdb for Consumption zone
 RUN pip install --no-cache-dir apache-airflow-providers-apache-spark==5.2.1 --break-system-packages
 RUN pip install --no-cache-dir pyspark==3.5.0 --break-system-packages
 RUN pip install --no-cache-dir vadersentiment==3.3.2 --break-system-packages
-
+RUN pip install --no-cache-dir duckdb==1.2.2 --break-system-packages

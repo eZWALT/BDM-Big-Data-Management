@@ -47,6 +47,8 @@ def show_layout():
     - **🥉 Landing Zone** → View and interact with raw ingested data.  
     - **🥈 Trusted Zone** → Explore transformed and validated data.  
     - **🏆 Exploitation Zone** → Access high-quality, analytics-ready datasets.  
+    - **🔎 Sentiment Zone** → Access Sentiment Analysis Analytics.
+    - **📊 Dashboard → Visualize trends and analytics through the dashboard 
     - **📡 Streaming** → Monitor real-time consumer sentiment and brand impact.  
     """
     )

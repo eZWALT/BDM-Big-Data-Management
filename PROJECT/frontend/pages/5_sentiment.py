@@ -1,105 +1,127 @@
 import os
-import streamlit as st
+import io
 import pandas as pd
+import streamlit as st
+from datetime import datetime
+import pyarrow.parquet as pq
 import duckdb
-from datetime import datetime, timedelta
-import random
-from typing import List
+from urllib.parse import unquote
+import altair as alt
 
-# --------------------------
-# DATA LOADING
-# --------------------------
 
-def load_sentiment_from_duckdb(path='data/sentiment.duckdb') -> pd.DataFrame:
-    con = duckdb.connect(path)
-    df = con.execute("SELECT timestamp, company, product, platform, text, score, label FROM sentiment").df()
-    con.close()
-    return df
-
-def load_sentiment_data(environment: str) -> pd.DataFrame:
-    if environment == "production":
-        return load_sentiment_from_duckdb()
-    else:
-        raise ValueError("development environment has been removed")
+from dev.minio import get_minio_client, list_companies, list_products, load_duckdb_from_minio
+from dev.transforms import subset_sentiment, add_sentiment_score
 
 
 # --------------------------
 # VISUALIZATION
 # --------------------------
 
-def plot_sentiment_over_time(df: pd.DataFrame):
-    import altair as alt
-    st.markdown("Shows how average sentiment changes over time.")
-    chart = alt.Chart(df).mark_line().encode(
-        x='timestamp:T',
-        y='score:Q',
-        color='platform:N'
-    ).properties(height=300)
+def plot_sentiment_trend(df: pd.DataFrame):
+    df["date"] = pd.to_datetime(df["transaction_timestamp"]).dt.date
+    avg_sentiment = df.groupby("date")["sentiment_score"].mean().reset_index()
+
+    chart = alt.Chart(avg_sentiment).mark_line(point=True).encode(
+        x=alt.X("date:T", title="Date"),
+        y=alt.Y("sentiment_score:Q", title="Average Sentiment Score", scale=alt.Scale(domain=[-1, 1])),
+        tooltip=["date", "sentiment_score"]
+    ).properties(title="📈 Average Sentiment Score Over Time", height=300)
+
+    st.altair_chart(chart, use_container_width=True)
+    
+def plot_sentiment_distribution(df: pd.DataFrame):
+    counts = df["sentiment"].value_counts().reset_index()
+    counts.columns = ["sentiment", "count"]
+
+    chart = alt.Chart(counts).mark_arc(innerRadius=50).encode(
+        theta=alt.Theta(field="count", type="quantitative"),
+        color=alt.Color(field="sentiment", type="nominal", legend=alt.Legend(title="Sentiment")),
+        tooltip=["sentiment", "count"]
+    ).properties(title="📊 Sentiment Distribution")
+
     st.altair_chart(chart, use_container_width=True)
 
-def plot_label_distribution(df: pd.DataFrame, label_col="label"):
-    import altair as alt
-    label_df = df[label_col].value_counts().reset_index()
-    label_df.columns = ["label", "count"]
-    chart = alt.Chart(label_df).mark_bar().encode(
-        x='label:N',
-        y='count:Q',
-        color='label:N'
-    ).properties(height=300)
+
+def plot_sentiment_vs_engagement(df: pd.DataFrame):
+    chart = alt.Chart(df).mark_circle(size=60, opacity=0.5).encode(
+        x=alt.X("likes:Q", title="Likes"),
+        y=alt.Y("sentiment_score:Q", title="Sentiment Score", scale=alt.Scale(domain=[-1,1])),
+        color=alt.Color("sentiment:N", legend=alt.Legend(title="Sentiment")),
+        tooltip=["title", "sentiment", "likes", "views", "shares"]
+    ).properties(title="⚡ Sentiment vs Likes", height=300)
+
     st.altair_chart(chart, use_container_width=True)
 
-
 # --------------------------
-# MAIN LAYOUT
+# MAIN DASHBOARD LAYOUT
 # --------------------------
-
 def show_layout():
-    st.set_page_config(page_title="Sentiment", layout="wide")
+    st.set_page_config(page_title="Sentiment Analysis", layout="wide")
     st.title("💬 Sentiment Analysis Dashboard")
 
-    environment = os.getenv("ENVIRONMENT_TYPE", "production")
-    df = load_sentiment_data(environment)
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
-
-    # Sidebar filters
-    st.sidebar.header("🔍 Filter Data")
-    selected_company = st.sidebar.selectbox("Select Company", sorted(df["company"].unique()))
-    df = df[df["company"] == selected_company]
-
-    selected_product = st.sidebar.selectbox("Select Product", sorted(df["product"].unique()))
-    df = df[df["product"] == selected_product]
-
-    selected_platforms = st.sidebar.multiselect(
-        "Select Platform(s)", sorted(df["platform"].unique()), default=sorted(df["platform"].unique())
-    )
-    df = df[df["platform"].isin(selected_platforms)]
+    st.warning("⚠️ Work in Progress. Functionality may be limited ⚠️")
 
     # About section
     with st.expander(f"About this Dashboard"):
         st.markdown("""
         This dashboard helps you analyze **sentiment and emotion trends** in user posts related to a specific product/company.
+        Each product's data is stored separately for modular and safe access for each company.
 
         **Features:**
         - 📈 Sentiment over time (average score)
         - 📊 Emotion distribution (labels)
         - 📝 Recent post sentiment samples
-        - 🧪 Live model prediction (in dev mode only)
         """)
 
-    # Plots
-    st.subheader("📈 Sentiment Score Over Time")
-    plot_sentiment_over_time(df)
 
-    st.subheader("📊 Emotion Label Distribution")
-    plot_label_distribution(df, label_col="label")
+    minio = get_minio_client()
+    bucket = "exploitation"
 
-    st.subheader("🔍 Recent Comments")
-    st.dataframe(df.sort_values(by="timestamp", ascending=False)[
-        ["timestamp", "label", "text"]
-    ].reset_index(drop=True).head(10))
+    # First: Select Company
+    companies = list_companies(minio, bucket)
+    if not companies:
+        st.warning("No companies found in exploitation bucket.")
+        st.stop()
+    selected_company = st.sidebar.selectbox("Select Company", companies)
+    # Then: Select Product for the company
+    products = list_products(minio, bucket, selected_company)
+    if not products:
+        st.warning(f"No products found for {selected_company}.")
+        st.stop()
 
-    st.markdown("---")
-    st.caption("Built with 🐍 Streamlit + 🤗 Transformers + 🦆 DuckDB")
+    selected_product = st.sidebar.selectbox("Select Product", products)
+    # Load data
+    df = load_duckdb_from_minio(minio, bucket, selected_company, selected_product)
+    if df.empty:
+        st.stop()
+        
+    # Subse the original dataframe 
+    df = subset_sentiment(df)
+    
+    # TODO: Revise this, probably transaction time does not make as much sense as creation_timestamp
+    df["transaction_timestamp"] = pd.to_datetime(df["transaction_timestamp"], errors="coerce")
+    df = df.dropna(subset=["transaction_timestamp"])
+    # Fill unknown fields :)
+
+    # Filter by platform
+    selected_platforms = st.sidebar.multiselect(
+        "Select Platform(s)", sorted(df["source"].dropna().unique()), default=sorted(df["source"].dropna().unique())
+    )
+    df = df[df["source"].isin(selected_platforms)]
+    df = add_sentiment_score(df)
+
+    # Visualizations
+    st.subheader("📈 Average Sentiment Score Over Time")
+    plot_sentiment_trend(df)
+
+    st.subheader("📊 Sentiment Distribution")
+    plot_sentiment_distribution(df)
+
+    st.subheader("⚡ Sentiment vs Likes Engagement")
+    plot_sentiment_vs_engagement(df)
+
+
+    st.caption("Built with 🐍 Streamlit + 🪣 MinIO + 🔎 Altair + 🦆 DuckDB")
 
 
 # --------------------------
