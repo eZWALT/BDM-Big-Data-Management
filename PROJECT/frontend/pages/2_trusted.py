@@ -1,12 +1,19 @@
 # pages/trusted.py
 
 import streamlit as st
+from dev.datalake import show_datalake_explorer
+import os 
+
+#Erase datalake state
+for key in list(st.session_state.keys()):
+    if key.startswith("datalake_"):
+        del st.session_state[key]
+ENV = (os.getenv("ENVIRONMENT_TYPE", "production"))
+
 
 def show_layout():
     st.set_page_config(page_title="Trusted Zone (Silver) 🥈", layout="wide")
     st.title("Trusted Zone (Silver) 🥈")
-
-    st.warning("⚠️ Work in Progress. Functionality may be limited⚠️")
 
     st.markdown("""
     ### 🔐 What is the Trusted Zone?
@@ -25,6 +32,9 @@ def show_layout():
             """
         )
 
+    # File Browser Component
+    st.subheader("🔍 Trusted Data Lake 🥈")
+    show_datalake_explorer(env=ENV, bucket="trusted")
 
 if __name__ == "__main__":
     show_layout()

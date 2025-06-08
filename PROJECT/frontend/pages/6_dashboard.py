@@ -13,14 +13,14 @@ from dev.minio import get_minio_client, list_companies, list_products, load_duck
 
 def render_kpis(df: pd.DataFrame):
     total_posts = len(df)
-    avg_likes = df["num_likes"].mean() if not df.empty else 0
-    avg_comments = df["num_comments"].mean() if not df.empty else 0
-    top_platform = df["platform"].mode()[0] if not df.empty else "N/A"
+    avg_likes = df["likes"].mean() if not df.empty else 0
+    avg_replies = df["replies"].mean() if not df.empty else 0
+    top_platform = df["source"].mode()[0] if not df.empty else "N/A"
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Posts", f"{total_posts}")
     col2.metric("Avg Likes per Post", f"{avg_likes:.1f}")
-    col3.metric("Avg Comments per Post", f"{avg_comments:.1f}")
+    col3.metric("Avg Replies per Post", f"{avg_replies:.1f}")
     col4.metric("Top Platform", top_platform)
 
 # --------------------------
@@ -29,7 +29,7 @@ def render_kpis(df: pd.DataFrame):
 
 def plot_volume_over_time(df: pd.DataFrame):
     df_count = (
-        df.groupby([pd.Grouper(key="timestamp", freq="D"), "platform"])
+        df.groupby([pd.Grouper(key="transaction_timestamp", freq="D"), "source"])
           .size()
           .reset_index(name="post_count")
     )
@@ -37,17 +37,17 @@ def plot_volume_over_time(df: pd.DataFrame):
         alt.Chart(df_count)
         .mark_bar()
         .encode(
-            x=alt.X("timestamp:T", title="Date"),
+            x=alt.X("transaction_timestamp:T", title="Date"),
             y=alt.Y("post_count:Q", title="Number of Posts"),
-            color="platform:N",
-            tooltip=["timestamp:T", "platform:N", "post_count:Q"],
+            color="source:N",
+            tooltip=["transaction_timestamp:T", "source:N", "post_count:Q"],
         )
         .properties(height=300)
     )
     st.altair_chart(chart, use_container_width=True)
 
 def plot_platform_share(df: pd.DataFrame):
-    df_platform = df["platform"].value_counts().reset_index()
+    df_platform = df["source"].value_counts().reset_index()
     df_platform.columns = ["platform", "count"]
     chart = (
         alt.Chart(df_platform)
@@ -62,25 +62,25 @@ def plot_platform_share(df: pd.DataFrame):
     st.altair_chart(chart, use_container_width=True)
 
 def plot_engagement_momentum(df: pd.DataFrame):
-    df_sorted = df.sort_values("timestamp")
+    df_sorted = df.sort_values("transaction_timestamp")
     df_engagement = (
-        df_sorted.groupby("timestamp")[["num_likes", "num_comments"]].sum().reset_index()
+        df_sorted.groupby("transaction_timestamp")[["likes", "replies"]].sum().reset_index()
     )
-    df_engagement["likes_7d_avg"] = df_engagement["num_likes"].rolling(7).mean()
-    df_engagement["comments_7d_avg"] = df_engagement["num_comments"].rolling(7).mean()
+    df_engagement["likes_7d_avg"] = df_engagement["likes"].rolling(7).mean()
+    df_engagement["replies_7d_avg"] = df_engagement["replies"].rolling(7).mean()
 
-    base = alt.Chart(df_engagement).encode(x="timestamp:T")
+    base = alt.Chart(df_engagement).encode(x="transaction_timestamp:T")
 
     likes_line = base.mark_line(color="blue").encode(
         y=alt.Y("likes_7d_avg", title="7-day Avg Likes"),
-        tooltip=[alt.Tooltip("timestamp:T", title="Date"), alt.Tooltip("likes_7d_avg", title="Likes")]
+        tooltip=[alt.Tooltip("transaction_timestamp:T", title="Date"), alt.Tooltip("likes_7d_avg", title="Likes")]
     )
-    comments_line = base.mark_line(color="orange").encode(
-        y=alt.Y("comments_7d_avg", title="7-day Avg Comments"),
-        tooltip=[alt.Tooltip("timestamp:T", title="Date"), alt.Tooltip("comments_7d_avg", title="Comments")]
+    replies_line = base.mark_line(color="orange").encode(
+        y=alt.Y("replies_7d_avg", title="7-day Avg Replies"),
+        tooltip=[alt.Tooltip("transaction_timestamp:T", title="Date"), alt.Tooltip("replies_7d_avg", title="Replies")]
     )
 
-    chart = alt.layer(likes_line, comments_line).resolve_scale(
+    chart = alt.layer(likes_line, replies_line).resolve_scale(
         y="independent"
     ).properties(height=300, title="📈 Engagement Momentum (7-day rolling avg)")
 
@@ -91,8 +91,8 @@ def plot_engagement_momentum(df: pd.DataFrame):
 # --------------------------
 
 def render_top_liked_posts(df: pd.DataFrame, n=10):
-    top_likes = df.nlargest(n, "num_likes")[
-        ["timestamp", "platform", "company", "product", "text", "num_likes", "num_comments"]
+    top_likes = df.nlargest(n, "likes")[
+        ["transaction_timestamp", "source", "title", "description", "likes", "replies"]
     ]
     st.subheader(f"🔥 Top {n} Most Liked Posts")
     st.dataframe(top_likes.reset_index(drop=True))
@@ -104,6 +104,8 @@ def render_top_liked_posts(df: pd.DataFrame, n=10):
 def show_layout():
     st.set_page_config(page_title="Engagement Dashboard", layout="wide")
     st.title("📊 Engagement & Platform Analysis Dashboard")
+
+    st.warning("⚠️ Work in Progress. Functionality may be limited ⚠️")
 
     # About section expander
     with st.expander("About this Dashboard"):
@@ -141,17 +143,21 @@ def show_layout():
         st.warning("No data available for this selection.")
         st.stop()
 
+    # Convert transaction_timestamp to datetime if not already
+    df["transaction_timestamp"] = pd.to_datetime(df["transaction_timestamp"], errors="coerce")
+    df = df.dropna(subset=["transaction_timestamp"])
+
     # Platform filter
-    platforms = sorted(df["platform"].dropna().unique())
+    platforms = sorted(df["source"].dropna().unique())
     selected_platforms = st.sidebar.multiselect("Select Platform(s)", platforms, default=platforms)
-    df = df[df["platform"].isin(selected_platforms)]
+    df = df[df["source"].isin(selected_platforms)]
 
     # Date filter
-    min_date = df["timestamp"].min().date()
-    max_date = df["timestamp"].max().date()
+    min_date = df["transaction_timestamp"].min().date()
+    max_date = df["transaction_timestamp"].max().date()
     date_range = st.sidebar.date_input("Select Date Range", [min_date, max_date], min_value=min_date, max_value=max_date)
     if len(date_range) == 2:
-        df = df[(df["timestamp"].dt.date >= date_range[0]) & (df["timestamp"].dt.date <= date_range[1])]
+        df = df[(df["transaction_timestamp"].dt.date >= date_range[0]) & (df["transaction_timestamp"].dt.date <= date_range[1])]
 
     # KPIs
     render_kpis(df)
@@ -171,8 +177,8 @@ def show_layout():
 
     # Recent posts table
     st.subheader("📝 Recent Posts")
-    recent_posts = df.sort_values("timestamp", ascending=False)[
-        ["timestamp", "platform", "company", "product", "text", "num_likes", "num_comments"]
+    recent_posts = df.sort_values("transaction_timestamp", ascending=False)[
+        ["transaction_timestamp", "source", "title", "description", "likes", "replies"]
     ]
     st.dataframe(recent_posts.reset_index(drop=True))
 

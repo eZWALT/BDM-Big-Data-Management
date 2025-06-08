@@ -2,11 +2,17 @@ import streamlit as st
 import requests
 import json
 import os
-from streamlit_file_browser import st_file_browser
+from dev.datalake import show_datalake_explorer
+
+#Erase datalake state
+for key in list(st.session_state.keys()):
+    if key.startswith("datalake_"):
+        del st.session_state[key]
+
 
 # Airflow API Configuration (Extracted from Docker Compose) to get URL
-LOCAL_TEST = False
-AIRFLOW_URL = "http://localhost:8080/api/v1" if LOCAL_TEST else "http://airflow-webserver:8080/api/v1"
+ENV = (os.getenv("ENVIRONMENT_TYPE", "production"))
+AIRFLOW_URL = "http://localhost:8080/api/v1" if (ENV == "development") else "http://airflow-webserver:8080/api/v1"
 AIRFLOW_AUTH = (
     os.getenv("AIRFLOW_USERNAME", "airflow"),  
     os.getenv("AIRFLOW_PASSWORD", "airflow") 
@@ -140,18 +146,6 @@ def show_airflow_component():
         st.warning("⚠️ No DAGs found or unable to connect to Airflow.")
 
 
-# Function to display the file browser
-def show_file_browser(datalake_path: str):
-    event = st_file_browser(
-        datalake_path,
-        key="file_browser",
-        show_choose_file=True,
-        show_choose_folder=True,
-        show_download_file=True,
-        show_upload_file=True,
-    )
-    return event
-
 def show_layout(datalake_path: str):
     st.set_page_config(page_title="Landing Zone (Bronze) 🥉", layout="wide")
     st.title("Landing Zone (Bronze) 🥉")
@@ -180,8 +174,8 @@ def show_layout(datalake_path: str):
     show_airflow_component()
 
     # File Browser Component
-    st.subheader("🔍 Data Lake FileSystem")
-    show_file_browser(datalake_path)
-
+    st.subheader("🔍 Landing Data Lake 🥉")
+    show_datalake_explorer(env=ENV, bucket="landing")
+    
 if __name__ == "__main__":
     show_layout(datalake_path="./test_data_lake")

@@ -59,6 +59,8 @@ def show_layout():
     st.set_page_config(page_title="Sentiment Analysis", layout="wide")
     st.title("💬 Sentiment Analysis Dashboard")
 
+    st.warning("⚠️ Work in Progress. Functionality may be limited ⚠️")
+
     # About section
     with st.expander(f"About this Dashboard"):
         st.markdown("""
