@@ -8,3 +8,4 @@ streamlit-scrollable-textbox
 duckdb==1.2.2
 kafka-python==2.1.0
 loguru
+minio==7.2.15

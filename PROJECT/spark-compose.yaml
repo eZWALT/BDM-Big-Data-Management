@@ -6,6 +6,10 @@ services:
     container_name: spark-master
     hostname: spark-master
     restart: unless-stopped
+    # This is a war crime, in production should be changed for a custom spark image
+    command: >
+      bash -c "/opt/bitnami/python/bin/pip install vaderSentiment==3.3.2 duckdb==1.2.2 &&
+              /opt/bitnami/scripts/spark/entrypoint.sh /opt/bitnami/scripts/spark/run.sh"
     ports:
       - "8090:8090"  # Spark Web UI
       - "7077:7077"  # Spark Master
@@ -20,6 +24,11 @@ services:
     container_name: spark-worker-1
     hostname: spark-worker-1
     restart: unless-stopped
+    # This is a war crime, in production should be changed for a custom spark image
+    command: >
+      bash -c "/opt/bitnami/python/bin/pip install vaderSentiment==3.3.2 duckdb==1.2.2 &&
+              /opt/bitnami/scripts/spark/entrypoint.sh /opt/bitnami/scripts/spark/run.sh"
+
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
